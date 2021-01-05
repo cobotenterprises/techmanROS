@@ -1,0 +1,7 @@
+bool relative
+float32 speed # percentage (0.0 - 1.0)
+float64[] goal # [X, Y, Z, RX, RY, RZ]
+---
+RobotState state
+---
+RobotState state

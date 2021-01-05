@@ -1,0 +1,3 @@
+float64[] tcp # [X, Y, Z, RX, RY, RZ]
+float32 weight
+---
