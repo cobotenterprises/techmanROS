@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(robotic_arm)
 
 find_package(
@@ -11,19 +11,19 @@ find_package(
    dynamic_reconfigure
 )
 
-# add_message_files(
-#    FILES
-#    ButtonEvent.msg
-# )
+add_message_files(
+   FILES
+   RobotState.msg
+)
 
-# generate_messages(
-#    DEPENDENCIES
-#    std_msgs
-# )
+generate_messages(
+   DEPENDENCIES
+   std_msgs
+)
 
-# generate_dynamic_reconfigure_options(
-#   cfg/RemoteController.cfg
-# )
+generate_dynamic_reconfigure_options(
+  cfg/RoboticArm.cfg
+)
 
 catkin_package(
    # Specify package dependencies
