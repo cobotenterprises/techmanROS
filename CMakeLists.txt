@@ -16,6 +16,13 @@ add_message_files(
    RobotState.msg
 )
 
+add_service_files(
+   FILES
+   ExitListen.srv
+   GetMode.srv
+   SetTCP.srv
+)
+
 generate_messages(
    DEPENDENCIES
    std_msgs
