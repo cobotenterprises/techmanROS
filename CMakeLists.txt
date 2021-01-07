@@ -9,6 +9,7 @@ find_package(
    rospy
    message_generation
    dynamic_reconfigure
+   actionlib_msgs
 )
 
 add_message_files(
@@ -23,9 +24,18 @@ add_service_files(
    SetTCP.srv
 )
 
+add_action_files(
+    DIRECTORY
+    action
+    FILES
+    MoveJoints.action
+    MoveTCP.action
+)
+
 generate_messages(
    DEPENDENCIES
    std_msgs
+   actionlib_msgs
 )
 
 generate_dynamic_reconfigure_options(
@@ -39,6 +49,7 @@ catkin_package(
    rospy
    message_runtime
    dynamic_reconfigure
+   actionlib_msgs
 )
 
 include_directories(${catkin_INCLUDE_DIRS})

@@ -3,6 +3,7 @@
 import os
 import sys
 import rospy
+import actionlib
 import time
 import dateutil.parser
 
@@ -18,31 +19,92 @@ from robotic_arm.srv import ExitListen, ExitListenResponse
 from robotic_arm.srv import GetMode, GetModeResponse
 from robotic_arm.srv import SetTCP, SetTCPResponse
 
-from robotic_arm.msg import RobotState as RobotStateMsg 
-
-
-NODE_NAME='robotic_arm'
-NODE_NAME_PRETTY='Robotic arm node'
+from robotic_arm.msg import RobotState as RobotStateMsg
+from robotic_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
+from robotic_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 
 
 class RoboticArmNode:
    ''' Simple ROS node to interface with a Techman robotic arm. '''
 
 
-   def __init__(self, robot_ip):
+   def __init__(self, node_name, node_name_pretty, robot_ip):
+      self._node_name = node_name
+      self._node_name_pretty = node_name_pretty
       self._robot_ip = robot_ip
+
+      # Initialise node
+      rospy.init_node(self._node_name)
 
       # Bind callbacks
       rospy.on_shutdown(self._shutdown_callback)
       Server(RoboticArmConfig, self._reconfigure_callback)
 
       # Set up publishers
-      self._broadcast_pub = rospy.Publisher(f'/{NODE_NAME}/state', RobotStateMsg, queue_size = 1)
+      self._broadcast_pub = rospy.Publisher(f'/{self._node_name}/state', RobotStateMsg, queue_size = 1)
       
       # Set up services
-      rospy.Service(f'/{NODE_NAME}/exit_listen', ExitListen, self._exit_listen)
-      rospy.Service(f'/{NODE_NAME}/get_mode', GetMode, self._get_mode)
-      rospy.Service(f'/{NODE_NAME}/set_tcp', SetTCP, self._set_tcp)
+      rospy.Service(f'/{self._node_name}/exit_listen', ExitListen, self._exit_listen)
+      rospy.Service(f'/{self._node_name}/get_mode', GetMode, self._get_mode)
+      rospy.Service(f'/{self._node_name}/set_tcp', SetTCP, self._set_tcp)
+
+      # Set up actions
+      self._move_joints_act = actionlib.SimpleActionServer(f'/{self._node_name}/move_joints', MoveJointsAction, execute_cb=self._move_joints, auto_start = False)
+      self._move_tcp_act = actionlib.SimpleActionServer(f'/{self._node_name}/move_tcp', MoveTCPAction, execute_cb=self._move_tcp, auto_start = False)
+      self._mja_started, self._mta_started = False, False
+      self._mja_in_feedback, self._mta_in_feedback = False, False
+
+      rospy.loginfo(f'{self._node_name_pretty} has started.')
+
+
+   def _move_joints(self, goal): asyncio.run(self._move_joints_async(goal))
+   async def _move_joints_async(self, goal):
+      try:
+         async with techmanpy.connect_sct(robot_ip=self._robot_ip, conn_timeout=1) as conn:
+            if goal.relative: 
+               await conn.move_to_relative_joint_angles_ptp(
+                  goal.goal,
+                  goal.speed,
+                  self._acceleration_duration,
+                  use_precise_positioning=self._precise_positioning
+               )
+            else: 
+               await conn.move_to_joint_angles_ptp(
+                  goal.goal,
+                  goal.speed,
+                  self._acceleration_duration,
+                  use_precise_positioning=self._precise_positioning
+               )               
+            self._mja_in_feedback = True
+            await conn.set_queue_tag(1, wait_for_completion=True)
+            self._mja_in_feedback = False
+            self._move_joints_act.set_succeeded(MoveJointsFeedback(self._state))
+      except TMConnectError: rospy.logerr('Could not exit listen: SCT not online')
+
+
+   def _move_tcp(self, goal): asyncio.run(self._move_tcp_async(goal))
+   async def _move_tcp_async(self, goal):
+      try:
+         async with techmanpy.connect_sct(robot_ip=self._robot_ip, conn_timeout=1) as conn:
+            if goal.relative: 
+               await conn.move_to_relative_point_ptp(
+                  goal.goal,
+                  goal.speed,
+                  self._acceleration_duration,
+                  use_precise_positioning=self._precise_positioning
+               )
+            else: 
+               await conn.move_to_point_ptp(
+                  goal.goal,
+                  goal.speed,
+                  self._acceleration_duration,
+                  use_precise_positioning=self._precise_positioning
+               )               
+            self._mta_in_feedback = True
+            await conn.set_queue_tag(2, wait_for_completion=True)
+            self._mta_in_feedback = False
+            self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._state))
+      except TMConnectError: rospy.logerr('Could not exit listen: SCT not online')
 
 
    def connect(self): asyncio.run(self._connect())
@@ -83,22 +145,32 @@ class RoboticArmNode:
 
 
    def _tmserver_callback(self, items):
-      state = RobotStateMsg()
+      self._state = RobotStateMsg()
 
       # Set timestamp
-      state.time = rospy.Time()      
+      self._state.time = rospy.Time()      
       formatted_time = items['Current_Time']
       time = dateutil.parser.isoparse(formatted_time).timestamp()
-      state.time.secs = int(time)
-      state.time.nsecs = int((time % 1) * 1_000_000)
+      self._state.time.secs = int(time)
+      self._state.time.nsecs = int((time % 1) * 1_000_000)
 
       # Set joint state
-      state.joint_pos = items['Joint_Angle']
-      state.joint_vel = items['Joint_Speed']
-      state.joint_tor = items['Joint_Torque']
+      self._state.joint_pos = items['Joint_Angle']
+      self._state.joint_vel = items['Joint_Speed']
+      self._state.joint_tor = items['Joint_Torque']
       
       # Publish
-      self._broadcast_pub.publish(state)
+      self._broadcast_pub.publish(self._state)
+      if self._mja_in_feedback: self._move_joints_act.publish_feedback(MoveJointsFeedback(self._state))
+      if self._mta_in_feedback: self._move_tcp_act.publish_feedback(MoveTCPFeedback(self._state))
+      
+      # Start action servers
+      if not self._mja_started:
+         self._mja_started = True
+         self._move_joints_act.start()
+      if not self._mta_started:
+         self._mta_started = True
+         self._move_tcp_act.start()
 
 
    def _reconfigure_callback(self, config, level):
@@ -109,23 +181,16 @@ class RoboticArmNode:
 
 
    def _shutdown_callback(self):
-      rospy.loginfo(f'{NODE_NAME_PRETTY} was terminated.')
+      rospy.loginfo(f'{self._node_name_pretty} was terminated.')
 
 
-def main():
-
-   # Initialise node
-   rospy.init_node(NODE_NAME)
+if __name__ == '__main__': 
 
    # Check if robot IP is provided
    if len(sys.argv) < 2:
       rospy.logerr(f'Robot IP address not specified')
       exit()
 
-   rospy.loginfo(f'{NODE_NAME_PRETTY} has started.')
-
    # Start main logic
-   node = RoboticArmNode(sys.argv[1])
+   node = RoboticArmNode('robotic_arm', 'Robotic arm node', sys.argv[1])
    node.connect()
-
-if __name__ == '__main__': main()

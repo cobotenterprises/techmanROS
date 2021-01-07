@@ -13,4 +13,6 @@
    <depend>std_msgs</depend>
    <depend>rospy</depend>
    <depend>dynamic_reconfigure</depend>
+   <depend>actionlib</depend>
+   <depend>actionlib_msgs</depend>
 </package>
