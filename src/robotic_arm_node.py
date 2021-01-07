@@ -4,6 +4,7 @@ import os
 import sys
 import rospy
 import time
+import dateutil.parser
 
 import asyncio
 import techmanpy
@@ -41,11 +42,25 @@ class RoboticArmNode:
       except TMConnectError:
          rospy.logerr('Robotic arm not online, exiting...')
 
-   def _tmserver_callback(self, result):
-      rospy.loginfo(f'Received {len(result)} items')
+   def _tmserver_callback(self, items):
+      state = RobotStateMsg()
+
+      # Set timestamp
+      state.time = rospy.Time()      
+      formatted_time = items['Current_Time']
+      time = dateutil.parser.isoparse(formatted_time).timestamp()
+      state.time.secs = int(time)
+      state.time.nsecs = int((time % 1) * 1_000_000)
+
+      # Set joint state
+      state.joint_pos = items['Joint_Angle']
+      state.joint_vel = items['Joint_Speed']
+      state.joint_tor = items['Joint_Torque']
+      
+      # Publish
+      self._broadcast_pub.publish(state)
 
    def _reconfigure_callback(self, config, level):
-      # Store dynamic reconfigure values for later use
       self._precise_positioning = config.precise_positioning
       self._acceleration_duration = config.acceleration_duration
       self._speed_multiplier = config.speed_multiplier
