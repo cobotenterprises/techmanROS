@@ -6,6 +6,16 @@ import rospy
 import actionlib
 import time
 import dateutil.parser
+import numpy as np
+from sympy.physics.vector import ReferenceFrame, express
+
+from sensor_msgs.msg import JointState as JointStateMsg
+from std_msgs.msg import Header as HeaderMsg
+
+# import tf2
+import tf_conversions
+import tf2_ros
+import geometry_msgs.msg
 
 import asyncio
 import techmanpy
@@ -32,6 +42,7 @@ class RoboticArmNode:
       self._node_name = node_name
       self._node_name_pretty = node_name_pretty
       self._robot_ip = robot_ip
+      self._seq_id = 0
 
       # Initialise node
       rospy.init_node(self._node_name)
@@ -42,6 +53,7 @@ class RoboticArmNode:
 
       # Set up publishers
       self._broadcast_pub = rospy.Publisher(f'/{self._node_name}/state', RobotStateMsg, queue_size = 1)
+      self._simulation_pub = rospy.Publisher(f'/joint_states', JointStateMsg, queue_size = 1)
       
       # Set up services
       rospy.Service(f'/{self._node_name}/exit_listen', ExitListen, self._exit_listen)
@@ -53,6 +65,11 @@ class RoboticArmNode:
       self._move_tcp_act = actionlib.SimpleActionServer(f'/{self._node_name}/move_tcp', MoveTCPAction, execute_cb=self._move_tcp, auto_start = False)
       self._mja_started, self._mta_started = False, False
       self._mja_in_feedback, self._mta_in_feedback = False, False
+
+      # Set up transfer functions
+      self._tf2_int = tf2_ros.Buffer()
+      tf2_ros.TransformListener(self._tf2_int)
+      self._tf2_pub = tf2_ros.TransformBroadcaster()
 
       rospy.loginfo(f'{self._node_name_pretty} has started.')
 
@@ -152,18 +169,40 @@ class RoboticArmNode:
       formatted_time = items['Current_Time']
       time = dateutil.parser.isoparse(formatted_time).timestamp()
       self._state.time.secs = int(time)
-      self._state.time.nsecs = int((time % 1) * 1_000_000)
+      self._state.time.nsecs = int((time % 1) * 1_000_000_000)
+
+      # Publish transfer functions
+      self._publish_tf2(items, self._state.time)
+
+      try: 
+         result = self._tf2_int.lookup_transform('base', 'camera_real', rospy.Time())
+         # print(result)
+      except: pass
+
+      print(items['Coord_Robot_Tool'])
 
       # Set joint state
       self._state.joint_pos = items['Joint_Angle']
       self._state.joint_vel = items['Joint_Speed']
       self._state.joint_tor = items['Joint_Torque']
-      
-      # Publish
+
+      # Publish to custom topics
       self._broadcast_pub.publish(self._state)
       if self._mja_in_feedback: self._move_joints_act.publish_feedback(MoveJointsFeedback(self._state))
       if self._mta_in_feedback: self._move_tcp_act.publish_feedback(MoveTCPFeedback(self._state))
-      
+
+      # Publish to /joint_states
+      self._seq_id += 1
+      joint_state = JointStateMsg()
+      joint_state.header = HeaderMsg()
+      joint_state.header.seq = self._seq_id
+      joint_state.header.stamp = self._state.time
+      joint_state.name = ['shoulder_1_joint', 'shoulder_2_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+      joint_state.position = [np.radians(x) for x in items['Joint_Angle']]
+      joint_state.velocity = [np.radians(x) for x in items['Joint_Speed']]
+      joint_state.effort = [np.radians(x) for x in items['Joint_Torque']]
+      self._simulation_pub.publish(joint_state)
+
       # Start action servers
       if not self._mja_started:
          self._mja_started = True
@@ -171,6 +210,46 @@ class RoboticArmNode:
       if not self._mta_started:
          self._mta_started = True
          self._move_tcp_act.start()
+
+
+   def _publish_tf2(self, items, timestamp):
+      # Publish flange transfer function
+      tfmsg = geometry_msgs.msg.TransformStamped()
+      tfmsg.header.stamp = timestamp
+      tfmsg.header.frame_id = "base"
+      tfmsg.child_frame_id = 'flange_real'
+      tfmsg.transform.translation.x = float(items["Coord_Robot_Flange"][0]) / 1_000
+      tfmsg.transform.translation.y = float(items["Coord_Robot_Flange"][1]) / 1_000
+      tfmsg.transform.translation.z = float(items["Coord_Robot_Flange"][2]) / 1_000
+      q = tf_conversions.transformations.quaternion_from_euler(
+         np.radians(items["Coord_Robot_Flange"][3]),
+         np.radians(items["Coord_Robot_Flange"][4]),
+         np.radians(items["Coord_Robot_Flange"][5])
+      )
+      tfmsg.transform.rotation.x = q[0]
+      tfmsg.transform.rotation.y = q[1]
+      tfmsg.transform.rotation.z = q[2]
+      tfmsg.transform.rotation.w = q[3]
+      self._tf2_pub.sendTransform(tfmsg)
+
+      # Publish camera transfer function
+      tfmsg = geometry_msgs.msg.TransformStamped()
+      tfmsg.header.stamp = timestamp
+      tfmsg.header.frame_id = 'flange_real'
+      tfmsg.child_frame_id = 'camera_real'
+      tfmsg.transform.translation.x = float(items['HandCamera_Value'][0]) / 1_000
+      tfmsg.transform.translation.y = float(items['HandCamera_Value'][1]) / 1_000
+      tfmsg.transform.translation.z = float(items['HandCamera_Value'][2] + 8) / 1_000
+      q = tf_conversions.transformations.quaternion_from_euler(
+         np.radians(items['HandCamera_Value'][3]),
+         np.radians(items['HandCamera_Value'][4]),
+         0 # Ignore 180 degree rotation of the camera
+      )
+      tfmsg.transform.rotation.x = q[0]
+      tfmsg.transform.rotation.y = q[1]
+      tfmsg.transform.rotation.z = q[2]
+      tfmsg.transform.rotation.w = q[3]
+      self._tf2_pub.sendTransform(tfmsg)
 
 
    def _reconfigure_callback(self, config, level):

@@ -6,6 +6,7 @@ find_package(
    # Specify dependencies
    COMPONENTS
    std_msgs
+   sensor_msgs
    rospy
    message_generation
    dynamic_reconfigure
@@ -35,6 +36,7 @@ add_action_files(
 generate_messages(
    DEPENDENCIES
    std_msgs
+   sensor_msgs
    actionlib_msgs
 )
 
@@ -46,6 +48,7 @@ catkin_package(
    # Specify package dependencies
    CATKIN_DEPENDS
    std_msgs
+   sensor_msgs
    rospy
    message_runtime
    dynamic_reconfigure
