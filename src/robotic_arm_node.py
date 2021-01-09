@@ -8,7 +8,6 @@ import time
 import dateutil.parser
 import numpy as np
 
-# import tf2
 import tf_conversions
 import tf2_ros
 import geometry_msgs.msg
