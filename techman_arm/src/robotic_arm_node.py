@@ -168,7 +168,7 @@ class TechmanArmNode:
       self._robot_state.joint_pos = items['Joint_Angle']
       self._robot_state.joint_vel = items['Joint_Speed']
       self._robot_state.joint_tor = items['Joint_Torque']
-      # self._robot_state.flange_pos = items['Coord_Robot_Flange']
+      # self._robot_state.flange_pos = items['Coord_Robot_Flange'] 
       self._broadcast_pub.publish(self._robot_state)
 
       # Publish joint state
