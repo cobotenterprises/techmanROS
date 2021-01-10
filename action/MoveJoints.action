@@ -1,7 +1,0 @@
-bool relative
-float32 speed # percentage (0.0 - 1.0)
-float64[] goal # [J1, J2, J3, J4, J5, J6]
----
-RobotState state
----
-RobotState state

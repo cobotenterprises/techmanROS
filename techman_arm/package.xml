@@ -1,0 +1,19 @@
+<package format="2">
+   <name>robotic_arm</name>
+   <version>1.0.0</version>
+
+   <author email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</author>
+   <maintainer email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</maintainer>
+   <description>ROS package to interact with a Techman robotic arm.</description>
+   <license>Apache-License-2.0</license>
+
+   <buildtool_depend>catkin</buildtool_depend>
+   <build_depend>message_generation</build_depend>
+   <exec_depend>message_runtime</exec_depend>
+   <depend>std_msgs</depend>
+   <depend>sensor_msgs</depend>
+   <depend>rospy</depend>
+   <depend>dynamic_reconfigure</depend>
+   <depend>actionlib</depend>
+   <depend>actionlib_msgs</depend>
+</package>
