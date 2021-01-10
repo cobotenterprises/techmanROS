@@ -47,8 +47,7 @@ class TechmanArmSimNode(TechmanArmNode):
       self._simulate_tmserver()
 
 
-   async def _move_joints_async(self, goal):      
-      # We can get the joint values from the group and adjust some of the values:
+   async def _move_joints_async(self, goal):
       self._mja_in_feedback = True
       self._moveit_group.go([np.radians(x) for x in goal.goal], wait=True)
       self._moveit_group.stop()
