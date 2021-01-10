@@ -9,14 +9,11 @@ import dateutil.parser
 import numpy as np
 import datetime
 import threading
+import tf_conversions
 
 import moveit_commander
 import moveit_msgs.msg
 from moveit_commander.conversions import pose_to_list
-
-import tf_conversions
-import tf2_ros
-import geometry_msgs.msg
 
 from geometry_msgs.msg import Pose as PoseMsg, PoseStamped as PoseStampedMsg
 from sensor_msgs.msg import JointState as JointStateMsg
