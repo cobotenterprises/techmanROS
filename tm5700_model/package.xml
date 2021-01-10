@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-   <name>robot_model</name>
+   <name>tm5700_model</name>
    <version>1.0.0</version>
 
-   <description>Package containing 3D model of TM5-700 arm.</description>
+   <description>Package containing 3D model of the TM5-700 manipulator arm.</description>
    <author email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</author>
    <maintainer email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</maintainer>
    <license>Apache-License-2.0</license>

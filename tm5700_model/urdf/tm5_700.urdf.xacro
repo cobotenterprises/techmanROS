@@ -84,10 +84,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm5_base.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm5_base.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm5_base.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm5_base.stl" />
          </xacro:if>
          </geometry>
          <material name="LightGrey">
@@ -96,7 +96,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm5_base_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm5_base_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_y radius="0.06" length="0.05" mass="${base_mass}">
@@ -120,10 +120,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_400w_01.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_400w_01.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_400w_01.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_400w_01.stl" />
          </xacro:if>
          </geometry>
          <material name="DarkOlive">
@@ -132,7 +132,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm_400w_01_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm_400w_01_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_y radius="0.06" length="0.15" mass="${shoulder_mass}">
@@ -156,10 +156,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm5_700_arm1.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm5_700_arm1.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm5_700_arm1.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm5_700_arm1.stl" />
          </xacro:if>
          </geometry>
          <material name="DarkOlive">
@@ -168,7 +168,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm5_700_arm1_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm5_700_arm1_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_y radius="0.06" length="${arm_1_length}" mass="${arm_1_mass}">
@@ -192,10 +192,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm5_700_arm2.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm5_700_arm2.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm5_700_arm2.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm5_700_arm2.stl" />
          </xacro:if>
          </geometry>
          <material name="DarkOlive">
@@ -204,7 +204,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm5_700_arm2_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm5_700_arm2_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_y radius="0.045" length="${arm_2_length}" mass="${arm_2_mass}">
@@ -228,10 +228,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_100w_01.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_100w_01.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_100w_01.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_100w_01.stl" />
          </xacro:if>
          </geometry>
          <material name="DarkOlive">
@@ -240,7 +240,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm_100w_01_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm_100w_01_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_y radius="0.045" length="0.06" mass="${wrist_1_mass}">
@@ -264,10 +264,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_100w_02.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_100w_02.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_100w_02.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_100w_02.stl" />
          </xacro:if>
          </geometry>
          <material name="DarkOlive">
@@ -276,7 +276,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm_100w_02_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm_100w_02_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_z radius="0.045" length="0.12" mass="${wrist_2_mass}">
@@ -300,10 +300,10 @@
          <visual>
          <geometry>
          <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_ee.obj" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_ee.obj" />
          </xacro:unless>
          <xacro:if value="${stl_mesh}">
-            <mesh filename="package://robot_model/meshes/visual/tm_ee.stl" />
+            <mesh filename="package://tm5700_model/meshes/visual/tm_ee.stl" />
          </xacro:if>
          </geometry>
          <material name="LightGrey">
@@ -312,7 +312,7 @@
          </visual>
          <collision>
          <geometry>
-            <mesh filename="package://robot_model/meshes/collision/tm_ee_c.stl" />
+            <mesh filename="package://tm5700_model/meshes/collision/tm_ee_c.stl" />
          </geometry>
          </collision>
          <xacro:cylinder_inertial_z radius="0.045" length="0.12" mass="${wrist_3_mass}">

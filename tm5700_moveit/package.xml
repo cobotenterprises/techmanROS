@@ -1,6 +1,6 @@
 <package>
 
-  <name>moveit_config</name>
+  <name>tm5700_moveit</name>
   <version>0.3.0</version>
   <description>
      An automatically generated package with all the configuration and launch files for using the tm5_700 with the MoveIt! Motion Planning Framework
@@ -28,7 +28,7 @@
   <run_depend>xacro</run_depend>
   <!-- This package is referenced in the warehouse launch files, but does not build out of the box at the moment. Commented the dependency until this works. -->
   <!-- <run_depend>warehouse_ros_mongo</run_depend> -->
-    <run_depend>robot_model</run_depend>
+    <run_depend>tm5700_model</run_depend>
 
 
 </package>

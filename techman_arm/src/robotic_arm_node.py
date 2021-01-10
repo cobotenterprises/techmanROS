@@ -19,17 +19,17 @@ import geometry_msgs.msg
 from sensor_msgs.msg import JointState as JointStateMsg
 
 from dynamic_reconfigure.server import Server
-from robotic_arm.cfg import RoboticArmConfig
+from techman_arm.cfg import RoboticArmConfig
 
-from robotic_arm.srv import ExitListen, ExitListenResponse
-from robotic_arm.srv import GetMode, GetModeResponse
-from robotic_arm.srv import SetTCP, SetTCPResponse
+from techman_arm.srv import ExitListen, ExitListenResponse
+from techman_arm.srv import GetMode, GetModeResponse
+from techman_arm.srv import SetTCP, SetTCPResponse
 
-from robotic_arm.msg import RobotState as RobotStateMsg
-from robotic_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
-from robotic_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
+from techman_arm.msg import RobotState as RobotStateMsg
+from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
+from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 
-class RoboticArmNode:
+class TechmanArmNode:
    ''' Simple ROS node to interface with a Techman robotic arm. '''
 
 
@@ -123,11 +123,11 @@ class RoboticArmNode:
       try:
          async with techmanpy.connect_svr(robot_ip=self._robot_ip, conn_timeout=1) as conn:
             conn.add_broadcast_callback(self._tmserver_callback)
-            rospy.loginfo('Connected to robotic arm')
+            rospy.loginfo('Connected to Techman arm')
             await conn.keep_alive(quit=rospy.is_shutdown)
       except TMConnectError:
-         rospy.logerr('Robotic arm not online, exiting...')
-         rospy.signal_shutdown('Robotic arm was not online')
+         rospy.logerr('Techman arm not online, exiting...')
+         rospy.signal_shutdown('Techman arm was not online')
 
 
    def _exit_listen(self, _): return asyncio.run(self._exit_listen_async())
@@ -235,5 +235,5 @@ if __name__ == '__main__':
       exit()
 
    # Start main logic
-   node = RoboticArmNode('robotic_arm', 'Robotic arm node', myargv[1])
+   node = TechmanArmNode('techman_arm', 'Techman arm node', myargv[1])
    node.connect()

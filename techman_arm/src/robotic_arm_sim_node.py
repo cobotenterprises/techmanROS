@@ -21,13 +21,13 @@ import geometry_msgs.msg
 from geometry_msgs.msg import Pose as PoseMsg
 from sensor_msgs.msg import JointState as JointStateMsg
 
-from robotic_arm.msg import RobotState as RobotStateMsg
-from robotic_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
-from robotic_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
+from techman_arm.msg import RobotState as RobotStateMsg
+from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
+from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 
-from robotic_arm_node import RoboticArmNode
+from techman_arm_node import TechmanArmNode
 
-class RoboticArmSimNode(RoboticArmNode):
+class TechmanArmSimNode(TechmanArmNode):
    ''' Simple ROS node to interface with a Techman robotic arm. '''
 
 
@@ -109,7 +109,7 @@ class RoboticArmSimNode(RoboticArmNode):
 if __name__ == '__main__':
 
    # Start main logic
-   node = RoboticArmSimNode('robotic_arm', 'Robotic arm simulation node')
+   node = TechmanArmSimNode('techman_arm', 'Techman arm simulation node')
 
    # Keep node alive until shutdown
    rate = rospy.Rate(10)

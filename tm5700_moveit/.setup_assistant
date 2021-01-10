@@ -1,6 +1,6 @@
 moveit_setup_assistant_config:
   URDF:
-    package: robot_model
+    package: tm5700_model
     relative_path: urdf/tm5_700_robot.urdf.xacro
     xacro_args: ""
   SRDF:

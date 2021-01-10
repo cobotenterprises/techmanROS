@@ -5,7 +5,7 @@
    <arg name="rviz" default="false" />
 
    <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-   <include file="$(find moveit_config)/launch/planning_context.launch">
+   <include file="$(find tm5700_moveit)/launch/planning_context.launch">
       <arg name="load_robot_description" value="true"/>
    </include>
 
@@ -15,13 +15,13 @@
    <!-- Start joint state publisher -->
    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" required="true"> 
       <rosparam>         
-         source_list: [/robotic_arm/joint_states]
+         source_list: [/techman_arm/joint_states]
       </rosparam>
    </node>
 
    <group if="$(arg simulated)">
       <!-- Start MoveIt -->
-      <include file="$(find moveit_config)/launch/move_group.launch">
+      <include file="$(find tm5700_moveit)/launch/move_group.launch">
          <arg name="output" value="log"/>
          <arg name="allow_trajectory_execution" value="true"/>
          <arg name="fake_execution" value="true"/>
@@ -30,16 +30,16 @@
          <arg name="pipeline" value="ompl"/>
       </include>
 
-      <!-- Start robotic arm simulation node -->
-      <node pkg="robotic_arm" name="robotic_arm" type="robotic_arm_sim_node.py" output="screen" required="true" />
+      <!-- Start techman arm simulation node -->
+      <node pkg="techman_arm" name="techman_arm" type="techman_arm_sim_node.py" output="screen" required="true" />
    </group>
    <group unless="$(arg simulated)">
-      <!-- Start robotic arm node -->
-      <node pkg="robotic_arm" name="robotic_arm" type="robotic_arm_node.py" args="$(arg robot_ip)" output="screen" required="true" />
+      <!-- Start techman arm node -->
+      <node pkg="techman_arm" name="techman_arm" type="techman_arm_node.py" args="$(arg robot_ip)" output="screen" required="true" />
    </group>
 
    <!-- Start RViz -->
    <group if="$(arg rviz)">
-      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find robot_model)/launch/config.rviz" required="true" />
+      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tm5700_model)/launch/config.rviz" required="true" />
    </group>
 </launch>
