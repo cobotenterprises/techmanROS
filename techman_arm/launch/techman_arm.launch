@@ -19,6 +19,10 @@
       </rosparam>
    </node>
 
+   <group unless="$(arg simulated)">
+      <!-- Start techman arm node -->
+      <node pkg="techman_arm" name="techman_arm" type="techman_arm_node.py" args="$(arg robot_ip)" output="screen" required="true" />
+   </group>
    <group if="$(arg simulated)">
       <!-- Start MoveIt -->
       <include file="$(find tm5700_moveit)/launch/move_group.launch">
@@ -30,12 +34,8 @@
          <arg name="pipeline" value="ompl"/>
       </include>
 
-      <!-- Start techman arm simulation node -->
+      <!-- Start techman arm simulated node -->
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_sim_node.py" output="screen" required="true" />
-   </group>
-   <group unless="$(arg simulated)">
-      <!-- Start techman arm node -->
-      <node pkg="techman_arm" name="techman_arm" type="techman_arm_node.py" args="$(arg robot_ip)" output="screen" required="true" />
    </group>
 
    <!-- Start RViz -->

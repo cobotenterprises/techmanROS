@@ -18,7 +18,7 @@ import tf_conversions
 import tf2_ros
 import geometry_msgs.msg
 
-from geometry_msgs.msg import Pose as PoseMsg
+from geometry_msgs.msg import Pose as PoseMsg, PoseStamped as PoseStampedMsg
 from sensor_msgs.msg import JointState as JointStateMsg
 
 from techman_arm.msg import RobotState as RobotStateMsg
@@ -38,10 +38,10 @@ class TechmanArmSimNode(TechmanArmNode):
       # Set up subscriber
       rospy.Subscriber('/move_group/fake_controller_joint_states', JointStateMsg, self._on_joint_state)
 
-      # Setup MoveIt
+      # Initialize MoveIt
+      self._moveit_scene = moveit_commander.PlanningSceneInterface()
+      self._moveit_robot = moveit_commander.RobotCommander()
       self._moveit_group = moveit_commander.MoveGroupCommander('manipulator')
-      self._moveit_group.set_max_acceleration_scaling_factor(0.5)
-      self._moveit_group.set_max_velocity_scaling_factor(0.5)
 
       # Start simulated TM server
       self._simulate_tmserver()
