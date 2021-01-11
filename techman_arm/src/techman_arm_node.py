@@ -45,10 +45,6 @@ class TechmanArmNode:
       # Initialise node
       rospy.init_node(self._node_name)
 
-      # Bind callbacks
-      rospy.on_shutdown(self._shutdown_callback)
-      Server(RoboticArmConfig, self._reconfigure_callback)
-
       # Set up publishers
       self._broadcast_pub = rospy.Publisher(f'/{self._node_name}/state', RobotStateMsg, queue_size = 1)
       self._joint_states_pub = rospy.Publisher(f'/{self._node_name}/joint_states', JointStateMsg, queue_size = 1)
@@ -64,6 +60,10 @@ class TechmanArmNode:
       self._move_tcp_act = actionlib.SimpleActionServer(f'/{self._node_name}/move_tcp', MoveTCPAction, execute_cb=self._move_tcp, auto_start = False)
       self._mja_started, self._mta_started = False, False
       self._mja_in_feedback, self._mta_in_feedback = False, False
+
+      # Bind callbacks
+      rospy.on_shutdown(self._shutdown_callback)
+      Server(RoboticArmConfig, self._reconfigure_callback)
 
       rospy.loginfo(f'{self._node_name_pretty} has started.')
 
