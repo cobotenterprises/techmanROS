@@ -9,7 +9,7 @@ import dateutil.parser
 import numpy as np
 import datetime
 import threading
-import tf_conversions
+from scipy.spatial.transform import Rotation
 
 import moveit_commander
 import moveit_msgs.msg
@@ -53,19 +53,36 @@ class TechmanArmSimNode(TechmanArmNode):
 
 
    async def _move_tcp_async(self, goal):
+
+      if goal.relative:
+         # Get current pose
+         curr_pose_msg = self._moveit_group.get_current_pose().pose
+         cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
+         curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
+         curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
+         # Transform to TCP
+         curr_pos += curr_rot.apply(np.array(goal.tcp))
+
+         # Translate and rotate relative
+         tcp_pos = curr_pos + curr_rot.apply(goal.goal[0:3])
+         tcp_rot = curr_rot * Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+      else: 
+         tcp_pos = np.array(goal.goal[0:3])
+         tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+
+      # Transform back from TCP
+      tcp_pos -= tcp_rot.apply(np.array(goal.tcp))
+
+      # Build pose message
       pose_goal = PoseMsg()
-      q = tf_conversions.transformations.quaternion_from_euler(
-         np.radians(goal.goal[3]),
-         np.radians(goal.goal[4]),
-         np.radians(goal.goal[5])
-      )
-      pose_goal.orientation.x = q[0]
-      pose_goal.orientation.y = q[1]
-      pose_goal.orientation.z = q[2]
-      pose_goal.orientation.w = q[3]
-      pose_goal.position.x = goal.goal[0] / 1_000
-      pose_goal.position.y = goal.goal[1] / 1_000
-      pose_goal.position.z = goal.goal[2] / 1_000
+      tcp_rot_arr = tcp_rot.as_quat()
+      pose_goal.orientation.x = tcp_rot_arr[0]
+      pose_goal.orientation.y = tcp_rot_arr[1]
+      pose_goal.orientation.z = tcp_rot_arr[2]
+      pose_goal.orientation.w = tcp_rot_arr[3]
+      pose_goal.position.x = tcp_pos[0] / 1_000
+      pose_goal.position.y = tcp_pos[1] / 1_000
+      pose_goal.position.z = tcp_pos[2] / 1_000
       self._moveit_group.set_pose_target(pose_goal)
       self._mta_in_feedback = True
       self._moveit_group.go(wait=True)
