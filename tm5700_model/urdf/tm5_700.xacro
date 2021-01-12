@@ -82,25 +82,25 @@
 
       <link name="base_link" >
          <visual>
-         <geometry>
-         <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://tm5700_model/meshes/visual/tm5_base.obj" />
-         </xacro:unless>
-         <xacro:if value="${stl_mesh}">
-            <mesh filename="package://tm5700_model/meshes/visual/tm5_base.stl" />
-         </xacro:if>
-         </geometry>
-         <material name="LightGrey">
-            <color rgba="0.5 0.5 0.5 1.0" />
-         </material>
+            <geometry>
+            <xacro:unless value="${stl_mesh}">
+               <mesh filename="package://tm5700_model/meshes/visual/tm5_base.obj" />
+            </xacro:unless>
+            <xacro:if value="${stl_mesh}">
+               <mesh filename="package://tm5700_model/meshes/visual/tm5_base.stl" />
+            </xacro:if>
+            </geometry>
+            <material name="LightGrey">
+               <color rgba="0.5 0.5 0.5 1.0" />
+            </material>
          </visual>
          <collision>
-         <geometry>
-            <mesh filename="package://tm5700_model/meshes/collision/tm5_base_c.stl" />
-         </geometry>
+            <geometry>
+               <mesh filename="package://tm5700_model/meshes/collision/tm5_base_c.stl" />
+            </geometry>
          </collision>
          <xacro:cylinder_inertial_y radius="0.06" length="0.05" mass="${base_mass}">
-         <origin xyz="0 0 0" rpy="0 0 0" />
+            <origin xyz="0 0 0" rpy="0 0 0" />
          </xacro:cylinder_inertial_y>
       </link>
 
@@ -327,6 +327,36 @@
       </joint>
 
       <link name="flange_link">
+      </link>
+
+      <joint name="camera_fixed_joint" type="fixed">
+         <parent link="wrist_3_link" />
+         <child link = "camera_link" />
+         <origin xyz="0 0.07969 0.05331" rpy="0 0 0" />
+      </joint>
+
+      <xacro:property name="camera_link" value="0.05" /> <!-- Size of square 'camera' box -->
+      <link name="camera_link">
+         <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+         <box size="${camera_link} ${camera_link} ${camera_link}"/>
+            </geometry>
+         </collision>
+
+         <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+         <box size="${camera_link} ${camera_link} ${camera_link}"/>
+            </geometry>
+            <material name="LightGrey"/>
+         </visual>
+
+         <inertial>
+            <mass value="1e-5" />
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+         </inertial>
       </link>
 
       <!-- ROS base to TM 'base_link' Coordinates transform -->

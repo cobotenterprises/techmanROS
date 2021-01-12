@@ -22,6 +22,8 @@ from techman_arm.msg import RobotState as RobotStateMsg
 from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
 from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 
+from gazebo_msgs.msg import LinkState as LinkStateMsg
+
 from techman_arm_node import TechmanArmNode
 
 class TechmanArmSimNode(TechmanArmNode):
@@ -32,8 +34,22 @@ class TechmanArmSimNode(TechmanArmNode):
       super().__init__(node_name, node_name_pretty, None)
       self._items = None
 
+      self._joint_map = {
+         'shoulder_1_joint': 'shoulder_1_link',
+         'shoulder_2_joint': 'arm_1_link',
+         'elbow_joint': 'arm_2_link',
+         'wrist_1_joint': 'wrist_1_link',
+         'wrist_2_joint': 'wrist_2_link',
+         'wrist_3_joint':'wrist_3_link'
+      }
+
       # Set up subscriber
-      rospy.Subscriber('/move_group/fake_controller_joint_states', JointStateMsg, self._on_joint_state)
+      rospy.Subscriber('/move_group/fake_controller_joint_states', JointStateMsg, self._on_moveit_joint_state)
+      rospy.Subscriber('/joint_states', JointStateMsg, self._on_joint_state)
+
+      # Setup publisher
+      # self._gazebo_pub = rospy.Publisher('/gazebo/set_link_state', LinkStateMsg, queue_size = 10)
+      self._gazebo_pub = rospy.Publisher('/robot_namespace/joint_states', JointStateMsg, queue_size = 10)
 
       # Initialize MoveIt
       self._moveit_scene = moveit_commander.PlanningSceneInterface()
@@ -99,7 +115,7 @@ class TechmanArmSimNode(TechmanArmNode):
       else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))
 
 
-   def _on_joint_state(self, joint_state):
+   def _on_moveit_joint_state(self, joint_state):
       items = dict()
       items['Current_Time'] = datetime.datetime.now().isoformat()
       jointmap = [0, 0, 0, 0, 0, 0]
@@ -120,6 +136,17 @@ class TechmanArmSimNode(TechmanArmNode):
       if self._items is not None: super()._tmserver_callback(self._items)
       if not rospy.is_shutdown():
          threading.Timer(0.01, self._simulate_tmserver).start()
+
+
+   def _on_joint_state(self, joint_state):
+      self._gazebo_pub.publish(joint_state)
+      return
+      # Forward joint state to Gazebo
+      for i, name in enumerate(joint_state.name):         
+         link_state = LinkStateMsg()
+         link_state.link_name = self._joint_map[name]
+         # link_state.pose = 
+
 
 
    def _shutdown_callback(self):

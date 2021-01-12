@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+
+   <gazebo>
+      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+         <robotNamespace>/robot_namespace</robotNamespace>
+      </plugin>
+   </gazebo>
+
+      <!-- transmission -->
+   <transmission name="shoulder_1_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="shoulder_1_stepper">
+         <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="shoulder_1_joint">
+         <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+   </transmission>
+
+   <transmission name="shoulder_2_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="shoulder_2_stepper">
+         <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="shoulder_2_joint">
+         <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+   </transmission>
+
+   <transmission name="elbow_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="elbow_stepper">
+         <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="elbow_joint">
+         <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+   </transmission>
+
+   <transmission name="wrist_1_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="wrist_1_stepper">
+         <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="wrist_1_joint">
+         <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+   </transmission>
+
+   <transmission name="wrist_2_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="wrist_2_stepper">
+         <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="wrist_2_joint">
+         <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+   </transmission>
+
+   <transmission name="wrist_3_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="wrist_3_stepper">
+         <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="wrist_3_joint">
+         <hardwareInterface>EffortJointInterface</hardwareInterface>
+      </joint>
+   </transmission>
+
+   <!-- camera sensor -->
+   <gazebo reference="camera_link">
+      <sensor type="camera" name="camera1">
+         <update_rate>30.0</update_rate>
+         <camera name="head">
+         <image>
+            <width>2592</width>
+            <height>1944</height>
+            <format>R8G8B8</format>
+         </image>
+         <horizontal_fov>1.3962634</horizontal_fov>
+         <intrinsics>
+            <fx>26.620225</fx>
+            <fy>26.620225</fy>
+            <cx>0</cx>
+            <cy>0</cy>
+            <s>0</s>
+         </intrinsics>
+         <clip>
+            <near>0.02</near>
+            <far>300</far>
+         </clip>
+         <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+         </noise>
+         </camera>
+         <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+         <alwaysOn>true</alwaysOn>
+         <updateRate>0.0</updateRate>
+         <cameraName>tmcamera_gazebo</cameraName>
+         <imageTopicName>image</imageTopicName>
+         <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+         <frameName>camera_link</frameName>
+         <hackBaseline>0.07</hackBaseline>
+         <distortionK1>0.0</distortionK1>
+         <distortionK2>0.0</distortionK2>
+         <distortionK3>0.0</distortionK3>
+         <distortionT1>0.0</distortionT1>
+         <distortionT2>0.0</distortionT2>
+         </plugin>
+      </sensor>
+   </gazebo>
+</robot>
