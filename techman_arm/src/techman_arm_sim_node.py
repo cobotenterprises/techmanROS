@@ -45,11 +45,17 @@ class TechmanArmSimNode(TechmanArmNode):
 
 
    async def _move_joints_async(self, goal):
+      joints_goal = [np.radians(x) for x in goal.goal]
+      if goal.relative:
+         curr_joints = self._moveit_group.get_current_joint_values()
+         for i in range(len(curr_joints)): joints_goal[i] += curr_joints[i]
+
       self._mja_in_feedback = True
-      self._moveit_group.go([np.radians(x) for x in goal.goal], wait=True)
+      did_succeed = self._moveit_group.go(joints_goal, wait=True)
       self._moveit_group.stop()
       self._mja_in_feedback = False
-      self._move_joints_act.set_succeeded(MoveJointsFeedback(self._robot_state))
+      if did_succeed: self._move_joints_act.set_succeeded(MoveJointsFeedback(self._robot_state))
+      else: self._move_joints_act.set_aborted(MoveJointsFeedback(self._robot_state))
 
 
    async def _move_tcp_async(self, goal):
@@ -85,11 +91,12 @@ class TechmanArmSimNode(TechmanArmNode):
       pose_goal.position.z = tcp_pos[2] / 1_000
       self._moveit_group.set_pose_target(pose_goal)
       self._mta_in_feedback = True
-      self._moveit_group.go(wait=True)
+      did_succeed = self._moveit_group.go(wait=True)
       self._moveit_group.stop()
       self._moveit_group.clear_pose_targets()
       self._mta_in_feedback = False
-      self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._robot_state))
+      if did_succeed: self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._robot_state))
+      else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))
 
 
    def _on_joint_state(self, joint_state):

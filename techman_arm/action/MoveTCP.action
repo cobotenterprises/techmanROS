@@ -1,6 +1,6 @@
+bool relative
 bool linear
 float32 speed # percentage (0.0 - 1.0)
-bool relative
 
 float64[] tcp # [x, y, z]
 float64[] goal # [X, Y, Z, RX, RY, RZ]
