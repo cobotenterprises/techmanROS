@@ -332,25 +332,25 @@
       <joint name="camera_fixed_joint" type="fixed">
          <parent link="wrist_3_link" />
          <child link = "camera_link" />
-         <origin xyz="0 0.07969 0.05331" rpy="0 0 0" />
+         <origin xyz="0 0.07969 0.05331" rpy="0 ${-0.5 * pi} ${-0.5 * pi}" />
       </joint>
 
-      <xacro:property name="camera_link" value="0.05" /> <!-- Size of square 'camera' box -->
+      <xacro:property name="camera_link" value="1e-3" /> <!-- Size of square 'camera' box -->
       <link name="camera_link">
-         <collision>
+         <!--<collision>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
          <box size="${camera_link} ${camera_link} ${camera_link}"/>
             </geometry>
-         </collision>
+         </collision>-->
 
-         <visual>
+         <!--<visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
          <box size="${camera_link} ${camera_link} ${camera_link}"/>
             </geometry>
             <material name="LightGrey"/>
-         </visual>
+         </visual>-->
 
          <inertial>
             <mass value="1e-5" />

@@ -1,0 +1,11 @@
+<package format="2">
+   <name>tm5700_gazebo</name>
+   <version>1.0.0</version>
+
+   <author email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</author>
+   <maintainer email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</maintainer>
+   <description>Gazebo related configuration files.</description>
+   <license>Apache-License-2.0</license>
+
+   <buildtool_depend>catkin</buildtool_depend>
+</package>

@@ -1,20 +1,21 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://wiki.ros.org/xacro">
 
+   <!-- controller -->
    <gazebo>
       <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-         <robotNamespace>/robot_namespace</robotNamespace>
+         <legacyModeNS>true</legacyModeNS>
       </plugin>
    </gazebo>
 
-      <!-- transmission -->
+   <!-- transmission -->
    <transmission name="shoulder_1_joint_trans">
       <type>transmission_interface/SimpleTransmission</type>
       <actuator name="shoulder_1_stepper">
          <mechanicalReduction>1</mechanicalReduction>
       </actuator>
       <joint name="shoulder_1_joint">
-         <hardwareInterface>EffortJointInterface</hardwareInterface>
+         <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
    </transmission>
 
@@ -24,7 +25,7 @@
          <mechanicalReduction>1</mechanicalReduction>
       </actuator>
       <joint name="shoulder_2_joint">
-         <hardwareInterface>EffortJointInterface</hardwareInterface>
+         <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
    </transmission>
 
@@ -34,7 +35,7 @@
          <mechanicalReduction>1</mechanicalReduction>
       </actuator>
       <joint name="elbow_joint">
-         <hardwareInterface>EffortJointInterface</hardwareInterface>
+         <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
    </transmission>
 
@@ -44,7 +45,7 @@
          <mechanicalReduction>1</mechanicalReduction>
       </actuator>
       <joint name="wrist_1_joint">
-         <hardwareInterface>EffortJointInterface</hardwareInterface>
+         <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
    </transmission>
 
@@ -54,7 +55,7 @@
          <mechanicalReduction>1</mechanicalReduction>
       </actuator>
       <joint name="wrist_2_joint">
-         <hardwareInterface>EffortJointInterface</hardwareInterface>
+         <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
    </transmission>
 
@@ -64,7 +65,7 @@
          <mechanicalReduction>1</mechanicalReduction>
       </actuator>
       <joint name="wrist_3_joint">
-         <hardwareInterface>EffortJointInterface</hardwareInterface>
+         <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
       </joint>
    </transmission>
 
@@ -87,7 +88,7 @@
             <s>0</s>
          </intrinsics>
          <clip>
-            <near>0.02</near>
+            <near>0.01</near>
             <far>300</far>
          </clip>
          <noise>

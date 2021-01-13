@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+   <!-- Start Gazebo killer -->
+   <node name="gazebo_killer" pkg="tm5700_gazebo" type="gazebo_killer.py" respawn="false" output="screen" />
+
+   <!-- startup simulated world -->
+   <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" default="worlds/empty.world"/>
+      <arg name="paused" value="false"/>
+      <arg name="gui" value="true"/>
+   </include>
+
+   <!-- load model -->
+   <include file="$(find tm5700_model)/launch/load.launch" />
+   <node name="spawn_gazebo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model tm700" respawn="false" output="screen" />
+
+   <!-- set up controller -->
+   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+      <param name="publish_frequency" type="double" value="50.0" />
+      <param name="tf_prefix" type="string" value="" />
+   </node>   
+   <rosparam file="$(find tm5700_gazebo)/config/arm_controller.yml" command="load"/>
+   <node name="joint_state_controller_spawner" pkg="controller_manager" type="spawner" args="joint_state_controller" output="screen"/>
+   <node name="arm_controller_spawner" pkg="controller_manager" type="spawner" args="arm_controller" output="screen"/>
+   <remap from="/joint_trajectory_action" to="/arm_controller/follow_joint_trajectory"/>
+
+   <!-- load moveit -->
+   <include file="$(find tm5700_moveit)/launch/move_group.launch">
+      <arg name="publish_monitored_planning_scene" value="true" />
+   </include>
+</launch>

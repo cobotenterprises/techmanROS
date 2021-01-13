@@ -4,42 +4,19 @@
    <arg name="robot_ip" default="" />
    <arg name="rviz" default="false" />
 
-   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-   <include file="$(find tm5700_moveit)/launch/planning_context.launch">
-      <arg name="load_robot_description" value="true"/>
-   </include>
-
-   <!-- Start tf2 publisher -->
-   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" required="true" />
-
-   <!-- Start joint state publisher -->
-   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" required="true"> 
-      <rosparam>         
-         source_list: [/techman_arm/joint_states]
-      </rosparam>
-   </node>
-
    <group unless="$(arg simulated)">
       <!-- Start techman arm node -->
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_node.py" args="$(arg robot_ip)" output="screen" required="true" />
    </group>
    <group if="$(arg simulated)">
-      <!-- Start MoveIt -->
-      <include file="$(find tm5700_moveit)/launch/move_group.launch">
-         <arg name="output" value="screen"/>
-         <arg name="allow_trajectory_execution" value="true"/>
-         <arg name="fake_execution" value="true"/>
-         <arg name="info" value="false"/>
-         <arg name="debug" value="false"/>
-         <arg name="pipeline" value="ompl"/>
-      </include>
+      <include file="$(find tm5700_gazebo)/launch/gazebo.launch" />
 
       <!-- Start techman arm simulated node -->
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_sim_node.py" output="screen" required="true" />
-   </group>
 
-   <!-- Start RViz -->
-   <group if="$(arg rviz)">
-      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tm5700_model)/launch/config.rviz" required="true" />
+      <!-- Start RViz -->
+      <group if="$(arg rviz)">
+         <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tm5700_model)/launch/config.rviz" required="true" />
+      </group>
    </group>
 </launch>
