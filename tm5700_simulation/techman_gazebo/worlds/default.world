@@ -27,17 +27,17 @@
       <cast_shadows>1</cast_shadows>
       <direction>0 0 -1</direction>
    </light>
-   
+
    <!-- Make the scene colors pretty-->
    <scene>
-      <ambient>0.40780 0.89019 0.63529 1</ambient>
-      <background>1 1 1 1</background>
+      <ambient>0.392 0.392 0.392 1</ambient>
+      <background>0.784 0.784 0.784 1</background>
       <shadows>1</shadows>
    </scene>
 
    <!-- Add a ground plane -->
-   <include>
+   <!--<include>
       <uri>model://ground_plane</uri>
-   </include>
+   </include>-->
 </world>
 </sdf>
