@@ -90,9 +90,9 @@
                <mesh filename="package://tm5700_model/meshes/visual/tm5_base.stl" />
             </xacro:if>
             </geometry>
-            <material name="LightGrey">
-               <color rgba="0.5 0.5 0.5 1.0" />
-            </material>
+            <!--<material name="LightGrey">
+               <color rgba="0.5 1 0.5 1.0" />
+            </material>-->
          </visual>
          <collision>
             <geometry>
@@ -298,17 +298,17 @@
 
       <link name="wrist_3_link">
          <visual>
-         <geometry>
-         <xacro:unless value="${stl_mesh}">
-            <mesh filename="package://tm5700_model/meshes/visual/tm_ee.obj" />
-         </xacro:unless>
-         <xacro:if value="${stl_mesh}">
-            <mesh filename="package://tm5700_model/meshes/visual/tm_ee.stl" />
-         </xacro:if>
-         </geometry>
-         <material name="LightGrey">
-            <color rgba="0.5 0.5 0.5 1.0" />
-         </material>
+            <geometry>
+               <xacro:unless value="${stl_mesh}">
+                  <mesh filename="package://tm5700_model/meshes/visual/tm_ee.obj" />
+               </xacro:unless>
+               <xacro:if value="${stl_mesh}">
+                  <mesh filename="package://tm5700_model/meshes/visual/tm_ee.stl" />
+               </xacro:if>
+            </geometry>
+            <material name="LightGrey">
+               <color rgba="0.5 0.5 0.5 1.0" />
+            </material>
          </visual>
          <collision>
          <geometry>

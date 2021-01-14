@@ -1,6 +1,6 @@
 # OBJ Export by Luxion KeyShot
 
-mtllib bs_k2.mtl
+mtllib tm5_base.mtl
 
 g DEFAULT_MTL
 usemtl Base-material_VR
