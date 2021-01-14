@@ -61,42 +61,97 @@ class TechmanArmSimNode(TechmanArmNode):
 
 
    async def _move_tcp_async(self, goal):
-
+      goal_pos, goal_rot = None, None
       if goal.relative:
          # Get current pose
          curr_pose_msg = self._moveit_group.get_current_pose().pose
          cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
          curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
          curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
-         # Transform to TCP
-         curr_pos += curr_rot.apply(np.array(goal.tcp))
+         curr_tcp_pos = curr_pos + curr_rot.apply(np.array(goal.tcp))
 
-         # Translate and rotate relative
-         tcp_pos = curr_pos + curr_rot.apply(goal.goal[0:3])
-         tcp_rot = curr_rot * Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
-      else: 
-         tcp_pos = np.array(goal.goal[0:3])
-         tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+         # Calculate goal
+         if goal.linear:
+            goal_pos, goal_rot = [], []
+            path_res = int(max(np.linalg.norm(np.array(goal.goal)[0:3]), np.linalg.norm(np.array(goal.goal)[3:6])))
+            if path_res == 0: path_res += 1
+            for i in range(path_res):
+               subgoal = np.array(goal.goal) * (i + 1)/path_res
+               # Translate and rotate relative
+               tcp_pos = curr_tcp_pos + curr_rot.apply(subgoal[0:3])
+               tcp_rot = curr_rot * Rotation.from_euler('xyz', subgoal[3:6], degrees=True)
+               goal_pos.append(tcp_pos - tcp_rot.apply(np.array(goal.tcp)))
+               goal_rot.append(tcp_rot)
+         else:
+            # Translate and rotate relative
+            tcp_pos = curr_tcp_pos + curr_rot.apply(goal.goal[0:3])
+            tcp_rot = curr_rot * Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+            goal_pos = tcp_pos - tcp_rot.apply(np.array(goal.tcp))
+            goal_rot = tcp_rot
+      else:
+         if goal.linear:
+            # Get current pose
+            curr_pose_msg = self._moveit_group.get_current_pose().pose
+            cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
+            curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
+            curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
+            curr_tcp_pos = curr_pos + curr_rot.apply(np.array(goal.tcp))
 
-      # Transform back from TCP
-      tcp_pos -= tcp_rot.apply(np.array(goal.tcp))
+            goal_tcp_pos = np.array(goal.goal[0:3])
+            goal_tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+            relative_rot = goal_tcp_rot.as_euler('xyz', degrees=True) - curr_rot.as_euler('xyz', degrees=True)
+            # Normalize relative goal
+            for i in range(3):
+               while (relative_rot[i] <= -180): relative_rot[i] += 360
+               while (relative_rot[i] > 180): relative_rot[i] -= 360
 
-      # Build pose message
-      pose_goal = PoseMsg()
-      tcp_rot_arr = tcp_rot.as_quat()
-      pose_goal.orientation.x = tcp_rot_arr[0]
-      pose_goal.orientation.y = tcp_rot_arr[1]
-      pose_goal.orientation.z = tcp_rot_arr[2]
-      pose_goal.orientation.w = tcp_rot_arr[3]
-      pose_goal.position.x = tcp_pos[0] / 1_000
-      pose_goal.position.y = tcp_pos[1] / 1_000
-      pose_goal.position.z = tcp_pos[2] / 1_000
-      self._moveit_group.set_pose_target(pose_goal)
+            # Interpolate trajectory
+            goal_pos, goal_rot = [], []
+            path_res = int(max(np.linalg.norm(goal_tcp_pos - curr_tcp_pos), np.linalg.norm(relative_rot)))
+            if path_res == 0: path_res += 1
+            for i in range(path_res):
+               subpos = goal_tcp_pos - (path_res - i - 1)/path_res * (goal_tcp_pos - curr_tcp_pos)
+               subrot = Rotation.from_euler('xyz', goal_tcp_rot.as_euler('xyz', degrees=True) - (path_res - i - 1)/path_res * relative_rot, degrees=True)
+               goal_pos.append(subpos - subrot.apply(np.array(goal.tcp)))
+               goal_rot.append(subrot)
+         else:
+            tcp_pos = np.array(goal.goal[0:3])
+            tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+            goal_pos = tcp_pos - tcp_rot.apply(np.array(goal.tcp))
+            goal_rot = tcp_rot
+
+      # Helper method to build pose message
+      def pose_msg(pos, rot):
+         # Build pose message
+         pose_goal = PoseMsg()
+         rot_arr = rot.as_quat()
+         pose_goal.orientation.x = rot_arr[0]
+         pose_goal.orientation.y = rot_arr[1]
+         pose_goal.orientation.z = rot_arr[2]
+         pose_goal.orientation.w = rot_arr[3]
+         pose_goal.position.x = pos[0] / 1_000
+         pose_goal.position.y = pos[1] / 1_000
+         pose_goal.position.z = pos[2] / 1_000
+         return pose_goal
+
+      # Plan and execute goal
       self._mta_in_feedback = True
-      did_succeed = self._moveit_group.go(wait=True)
-      self._moveit_group.stop()
-      self._moveit_group.clear_pose_targets()
+      if isinstance(goal_pos, list):
+         waypoints = [pose_msg(goal_pos[i], goal_rot[i]) for i in range(len(goal_pos))]
+         plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.01, 0.0)
+         if conformity < 0.95: 
+            rospy.logwarn(f'Could not execute linear trajectory, deviation was {1 - conformity}')
+            self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))
+            return
+         did_succeed = self._moveit_group.execute(plan, wait=True)
+         self._moveit_group.stop()
+      else:
+         self._moveit_group.set_pose_target(pose_msg(goal_pos, goal_rot))
+         did_succeed = self._moveit_group.go(wait=True)
+         self._moveit_group.stop()
+         self._moveit_group.clear_pose_targets()
       self._mta_in_feedback = False
+
       if did_succeed: self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._robot_state))
       else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))
 
