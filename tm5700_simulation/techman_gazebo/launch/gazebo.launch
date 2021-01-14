@@ -5,7 +5,7 @@
 
    <!-- startup simulated world -->
    <include file="$(find gazebo_ros)/launch/empty_world.launch">
-      <arg name="world_name" default="worlds/empty.world"/>
+      <arg name="world_name" default="$(find tm5700_gazebo)/worlds/default.world"/>
       <arg name="paused" value="false"/>
       <arg name="gui" value="true"/>
    </include>

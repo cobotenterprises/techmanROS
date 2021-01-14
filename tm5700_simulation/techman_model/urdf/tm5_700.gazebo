@@ -88,7 +88,7 @@
             <s>0</s>
          </intrinsics>
          <clip>
-            <near>0.01</near>
+            <near>0.001</near>
             <far>300</far>
          </clip>
          <noise>

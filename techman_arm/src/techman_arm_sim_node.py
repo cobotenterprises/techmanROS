@@ -3,6 +3,7 @@
 import os
 import sys
 import rospy
+import rostopic
 import actionlib
 import time
 import dateutil.parser
@@ -22,9 +23,8 @@ from techman_arm.msg import RobotState as RobotStateMsg
 from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
 from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 
-from gazebo_msgs.msg import LinkState as LinkStateMsg
-
 from techman_arm_node import TechmanArmNode
+
 
 class TechmanArmSimNode(TechmanArmNode):
    ''' Simple ROS node to interface with a Techman robotic arm. '''
