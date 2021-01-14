@@ -74,19 +74,22 @@
       <sensor type="camera" name="camera1">
          <update_rate>30.0</update_rate>
          <camera name="head">
+         <!-- resolution of the Techman camera -->
          <image>
             <width>2592</width>
             <height>1944</height>
             <format>R8G8B8</format>
          </image>
-         <horizontal_fov>1.3962634</horizontal_fov>
-         <intrinsics>
-            <fx>26.620225</fx>
-            <fy>26.620225</fy>
-            <cx>0</cx>
-            <cy>0</cy>
-            <s>0</s>
-         </intrinsics>
+         <!-- lens characteristics of the Techman camera -->
+         <lens>
+            <intrinsics>
+               <fx>2662.0225</fx>
+               <fy>2662.0225</fy>
+               <cx>1296</cx>
+               <cy>972</cy>
+               <s>0</s>
+            </intrinsics>
+         </lens>
          <clip>
             <near>0.001</near>
             <far>300</far>
