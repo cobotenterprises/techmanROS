@@ -4,18 +4,20 @@
    <plugin name="ros_link_attacher_plugin" filename="libtm5700_gazebo.so"/>
 
    <!-- Set users view angle -->
-   <gui>
-      <camera name="user_camera">
-         <pose>10 -1.5 0.75 0 0.1 2.35</pose>
+   <gui fullscreen='0'>
+      <camera name='user_camera'>
+      <pose>-3.73355 3.0423 3.80939 0 0.604 -0.734001</pose>
+      <view_controller>orbit</view_controller>
+      <projection_type>perspective</projection_type>
       </camera>
    </gui>
    
    <!-- Setup proper lightning -->
    <include>
       <uri>model://sun</uri>
-   </include>   
+   </include>
    <light name='spotlight' type='point'>
-      <pose>10 -10 7 0 0 0</pose>
+      <pose>-10 10 7 0 0 0</pose>
       <diffuse>0.5 0.5 0.5 1</diffuse>
       <specular>0.1 0.1 0.1 1</specular>
       <attenuation>
@@ -36,8 +38,8 @@
    </scene>
 
    <!-- Add a ground plane -->
-   <!--<include>
+   <include>
       <uri>model://ground_plane</uri>
-   </include>-->
+   </include>
 </world>
 </sdf>
