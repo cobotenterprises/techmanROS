@@ -71,50 +71,40 @@
 
    <!-- camera sensor -->
    <gazebo reference="camera_link">
-      <sensor type="camera" name="camera1">
+      <sensor type="camera" name="gazebo_camera">
          <update_rate>30.0</update_rate>
-         <camera name="head">
-         <!-- resolution of the Techman camera -->
-         <image>
-            <width>2592</width>
-            <height>1944</height>
-            <format>R8G8B8</format>
-         </image>
-         <!-- lens characteristics of the Techman camera -->
-         <lens>
-            <intrinsics>
-               <fx>662.0225</fx>
-               <fy>2662.0225</fy>
-               <cx>1296</cx>
-               <cy>972</cy>
-               <s>0</s>
-            </intrinsics>
-         </lens>
-         <clip>
-            <near>0.001</near>
-            <far>300</far>
-         </clip>
-         <noise>
-            <type>gaussian</type>
-            <mean>0.0</mean>
-            <stddev>0.007</stddev>
-         </noise>
+         <camera>
+            <!-- resolution of the Techman camera -->
+            <image>
+               <width>2592</width>
+               <height>1944</height>
+               <format>R8G8B8</format>
+            </image>
+            <!-- lens characteristics of the Techman camera -->
+            <lens>
+               <intrinsics>
+                  <fx>2662.0225</fx>
+                  <fy>2662.0225</fy>
+                  <cx>1296</cx>
+                  <cy>972</cy>
+                  <s>0</s>
+               </intrinsics>
+            </lens>
+            <clip>
+               <near>0.001</near>
+               <far>300</far>
+            </clip>
+            <noise>
+               <type>gaussian</type>
+               <mean>0.0</mean>
+               <stddev>0.007</stddev>
+            </noise>
+            <pose>0 0 0 0 -1.57079632679 -1.57079632679</pose>
          </camera>
          <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
-         <alwaysOn>true</alwaysOn>
-         <visualize>true</visualize>
-         <cameraName>tmcamera_gazebo</cameraName>
+         <cameraName>gazebo_camera</cameraName>
          <imageTopicName>image</imageTopicName>
          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
-         <frameName>camera_link</frameName>
-         <!-- 0 ${-0.5 * pi} ${-0.5 * pi} -->
-         <!--<pose relative_to="camera_link">0 0 0 0 -1.5 -1.5</pose>-->
-         <hackBaseline>0.07</hackBaseline>
-         <distortionK1>0.0</distortionK1>
-         <distortionK2>0.0</distortionK2>
-         <distortionK3>0.0</distortionK3>
-         <distortionT1>0.0</distortionT1>
-         <distortionT2>0.0</distortionT2>
          </plugin>
       </sensor>
    </gazebo>

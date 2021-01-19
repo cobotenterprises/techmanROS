@@ -4,8 +4,8 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /TF1/Frames1
         - /RobotModel1/Status1
+        - /Image1
       Splitter Ratio: 0.5823529362678528
     Tree Height: 140
   - Class: rviz/Selection
@@ -68,6 +68,8 @@ Visualization Manager:
           Value: true
         flange_link:
           Value: false
+        gazebo_camera:
+          Value: false
         shoulder_1_link:
           Value: false
         tool0:
@@ -97,7 +99,8 @@ Visualization Manager:
                       wrist_2_link:
                         wrist_3_link:
                           camera_link:
-                            {}
+                            gazebo_camera:
+                              {}
                           flange_link:
                             tool0:
                               {}
@@ -137,6 +140,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
         flange_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        gazebo_camera:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -184,7 +191,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /tmcamera_gazebo/image
+      Image Topic: /gazebo_camera/image
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -235,9 +242,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3834410309791565
+      Pitch: 0.31344109773635864
       Target Frame: <Fixed Frame>
-      Yaw: 4.153964042663574
+      Yaw: 5.593969345092773
     Saved: ~
 Window Geometry:
   Displays:
