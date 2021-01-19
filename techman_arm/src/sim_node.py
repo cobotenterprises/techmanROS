@@ -53,7 +53,19 @@ class TechmanArmSimNode(TechmanArmNode):
          for i in range(len(curr_joints)): joints_goal[i] += curr_joints[i]
 
       self._mja_in_feedback = True
-      did_succeed = self._moveit_group.go(joints_goal, wait=True)
+      self._moveit_group.set_joint_value_target({
+         'shoulder_1_joint': joints_goal[0],
+         'shoulder_2_joint': joints_goal[1],
+         'elbow_joint': joints_goal[2],
+         'wrist_1_joint': joints_goal[3],
+         'wrist_2_joint': joints_goal[4],
+         'wrist_3_joint': joints_goal[5]
+      })
+      result = self._moveit_group.plan()
+      for i, value in enumerate(result):
+         print(f'{i}: {str(value)[:50]}')
+      did_succeed = self._moveit_group.execute(result[1], wait=True)
+      self._moveit_group.clear_pose_targets()
       self._moveit_group.stop()
       self._mja_in_feedback = False
       if did_succeed: self._move_joints_act.set_succeeded(MoveJointsFeedback(self._robot_state))
@@ -139,6 +151,10 @@ class TechmanArmSimNode(TechmanArmNode):
       if isinstance(goal_pos, list):
          waypoints = [pose_msg(goal_pos[i], goal_rot[i]) for i in range(len(goal_pos))]
          plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.01, 0.0)
+         import pickle
+         with open('/home/jules/Code/Oxilia/oxilia-prima-clean/src/sensors/robotic_arm/trajectory.path', 'wb') as output:
+            pickle.dump(plan, output, pickle.HIGHEST_PROTOCOL)
+            print('dumped path')
          if conformity < 0.95: 
             rospy.logwarn(f'Could not execute linear trajectory, deviation was {1 - conformity}')
             self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))

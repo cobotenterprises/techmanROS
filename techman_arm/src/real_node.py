@@ -234,6 +234,11 @@ if __name__ == '__main__':
       rospy.logerr(f'Robot IP address not specified')
       exit()
 
+
+   # -- execute trajectory in sim or on real robot?
+   # simulated: true | false
+   # planner: tmflow | moveit
+
    # Start main logic
    node = TechmanArmNode('techman_arm', 'Techman arm node', myargv[1])
    node.connect()
