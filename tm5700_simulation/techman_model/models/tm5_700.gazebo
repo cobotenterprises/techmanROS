@@ -83,7 +83,7 @@
          <!-- lens characteristics of the Techman camera -->
          <lens>
             <intrinsics>
-               <fx>2662.0225</fx>
+               <fx>662.0225</fx>
                <fy>2662.0225</fy>
                <cx>1296</cx>
                <cy>972</cy>
@@ -102,13 +102,13 @@
          </camera>
          <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
          <alwaysOn>true</alwaysOn>
-         <updateRate>0.0</updateRate>
+         <visualize>true</visualize>
          <cameraName>tmcamera_gazebo</cameraName>
          <imageTopicName>image</imageTopicName>
          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
-         <!--<frameName>camera_link</frameName>-->
+         <frameName>camera_link</frameName>
          <!-- 0 ${-0.5 * pi} ${-0.5 * pi} -->
-         <pose relative_to="camera_link">0 0 0 0 0 0</pose>
+         <!--<pose relative_to="camera_link">0 0 0 0 -1.5 -1.5</pose>-->
          <hackBaseline>0.07</hackBaseline>
          <distortionK1>0.0</distortionK1>
          <distortionK2>0.0</distortionK2>

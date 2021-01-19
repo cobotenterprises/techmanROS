@@ -53,6 +53,7 @@ class TechmanArm:
          self._moveit_group = moveit_commander.MoveGroupCommander('manipulator')
          # Define lambda to lookup status code
          def moveit_desc(result_code):
+            if isinstance(result_code, MoveItErrorCodes): result_code = result_code.val
             for attr in dir(MoveItErrorCodes):
                val = getattr(MoveItErrorCodes, attr)
                if isinstance(val, int) and val == result_code: return attr
@@ -109,7 +110,7 @@ class TechmanArm:
             curr_joints = self._moveit_group.get_current_joint_values()
             for i in range(len(curr_joints)): joints_goal[i] += curr_joints[i]
          joint_dict = {}
-         for i in range(self.JOINTS): joint_dict[self.JOINTS[i]] = joints_goal[i]
+         for i in range(len(self.JOINTS)): joint_dict[self.JOINTS[i]] = joints_goal[i]
 
          # Plan trajectory
          self._moveit_group.set_joint_value_target(joint_dict)

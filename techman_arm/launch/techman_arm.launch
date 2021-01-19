@@ -3,11 +3,24 @@
    <arg name="simulated" default="false" />
    <arg name="rviz" default="false" />
 
+   <!-- Load robot model -->
    <include file="$(find tm5700_model)/launch/load.launch" />
 
    <group unless="$(arg simulated)">
       <arg name="planner" default="moveit" />
       <arg name="robot_ip" default="" />
+
+      <!-- Start MoveIt if used for planning -->
+      <group if="$(eval planner == 'moveit')">
+         <include file="$(find tm5700_moveit)/launch/move_group.launch">
+            <arg name="output" value="log"/>
+            <arg name="allow_trajectory_execution" value="false"/>
+            <arg name="fake_execution" value="false"/>
+            <arg name="info" value="false"/>
+            <arg name="debug" value="false"/>
+            <arg name="pipeline" value="ompl"/>
+         </include>
+      </group>
 
       <!-- Start joint state visualizer -->
       <node pkg="robot_state_publisher" name="robot_state_publisher" type="robot_state_publisher" output="screen" required="true" /> 
@@ -15,25 +28,25 @@
          <rosparam>source_list: [/techman_arm/joint_states]</rosparam>
       </node> 
 
-      <!-- Start techman arm node -->
+      <!-- Start techman physical arm node -->
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_real.py" args="$(arg robot_ip) $(arg planner)" output="screen" required="true" /> 
    </group>
 
    <group if="$(arg simulated)">
-      <arg name="x" default="0"/>
-      <arg name="y" default="0"/>
-      <arg name="z" default="0"/>
-      <arg name="gzclient" default="true" />
+      <arg name="gz_gui" default="true" />
+      <arg name="gz_world" default="$(find tm5700_gazebo)/worlds/empty.world" />
+      <arg name="gz_offset" default="0 0 0" />
 
+      <!-- Start Gazebo (and MoveIt) -->
       <include file="$(find tm5700_gazebo)/launch/gazebo.launch">
-         <arg name="client" value="$(arg gzclient)" />
-         <arg name="x" value="$(arg x)"/>
-         <arg name="y" value="$(arg y)"/>
-         <arg name="z" value="$(arg z)"/>
+         <arg name="compile_model" value="false" />
+         <arg name="client" value="$(arg gz_gui)" />
+         <arg name="world_name" value="$(arg gz_world)" />
+         <arg name="model_offset" value="$(arg gz_offset)" />
       </include>
 
-      <!-- Start techman arm simulated node -->
-      <node pkg="techman_arm" name="techman_arm" type="techman_arm_sim_node.py" output="screen" required="true" />
+      <!-- Start techman simulated arm node -->
+      <node pkg="techman_arm" name="techman_arm" type="techman_arm_sim.py" output="screen" required="true" />
    </group>
   
    <!-- Start RViz -->

@@ -1,29 +1,24 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import rospy
-import actionlib
-import time
-import dateutil.parser
 import numpy as np
-
 import asyncio
-import techmanpy
-from techmanpy import TechmanException, TMConnectError
-
-import tf_conversions
 import tf2_ros
-import geometry_msgs.msg
+import tf_conversions
+
+import techmanpy
+from techmanpy import TMConnectError
 
 from techman_arm_base import TechmanArm
 
 from sensor_msgs.msg import JointState as JointStateMsg
+from geometry_msgs.msg import TransformStamped as TransformStampedMsg
 
+from techman_arm.msg import MoveTCPGoal
+from techman_arm.msg import MoveJointsGoal
 from techman_arm.srv import ExitListen, ExitListenResponse
 
-from techman_arm.msg import MoveJointsGoal
-from techman_arm.msg import MoveTCPGoal
 
 class TechmanArmReal(TechmanArm):
    ''' ROS node to interact with physical Techman robotic arm. '''
@@ -53,12 +48,10 @@ class TechmanArmReal(TechmanArm):
                if not plan_success: return False
 
                # Execute trajectory
-               for joint_state in enumerate(plan.joint_trajectory.points):
+               for joint_state in plan.joint_trajectory.points:
                   trsct.move_to_joint_angles_path(
                      np.degrees(np.asarray(joint_state.positions)).tolist(),
-                     0,
-                     0,
-                     blending_perc=1.0
+                     0, 0, blending_perc=1.0
                   )
 
             if self._planner == 'tmflow':
@@ -101,6 +94,15 @@ class TechmanArmReal(TechmanArm):
       return False
 
 
+   def _exit_listen(self, _): return asyncio.run(self._exit_listen_async())
+   async def _exit_listen_async(self):
+      try:
+         async with techmanpy.connect_sct(robot_ip=self._robot_ip, conn_timeout=1) as conn:
+            await conn.exit_listen()
+            return ExitListenResponse()
+      except TMConnectError: rospy.logerr('Could not exit listen: SCT not online')
+
+
    def connect(self): asyncio.run(self._connect())
    async def _connect(self):
       try:
@@ -111,15 +113,6 @@ class TechmanArmReal(TechmanArm):
       except TMConnectError:
          rospy.logerr('Techman arm not online, exiting...')
          rospy.signal_shutdown('Techman arm was not online')
-
-
-   def _exit_listen(self, _): return asyncio.run(self._exit_listen_async())
-   async def _exit_listen_async(self):
-      try:
-         async with techmanpy.connect_sct(robot_ip=self._robot_ip, conn_timeout=1) as conn:
-            await conn.exit_listen()
-            return ExitListenResponse()
-      except TMConnectError: rospy.logerr('Could not exit listen: SCT not online')
 
 
    def _tmserver_callback(self, items):
@@ -138,7 +131,7 @@ class TechmanArmReal(TechmanArm):
 
 
    def _publish_tm_pose(self, name, pos):
-      tfmsg = geometry_msgs.msg.TransformStamped()
+      tfmsg = TransformStampedMsg()
       tfmsg.header.stamp = rospy.Time.now()
       tfmsg.header.frame_id = 'world'
       tfmsg.child_frame_id = name
