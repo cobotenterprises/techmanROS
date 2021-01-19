@@ -1,19 +1,22 @@
 <?xml version="1.0"?>
 <launch>
    <arg name="simulated" default="false" />
-   <arg name="robot_ip" default="" />
    <arg name="rviz" default="false" />
-   <arg name="gzclient" default="true" />
-
-   <arg name="x" default="0"/>
-   <arg name="y" default="0"/>
-   <arg name="z" default="0"/>
 
    <group unless="$(arg simulated)">
+      <arg name="planner" default="moveit" />
+      <arg name="robot_ip" default="" />
+
       <!-- Start techman arm node -->
-      <node pkg="techman_arm" name="techman_arm" type="techman_arm_node.py" args="$(arg robot_ip)" output="screen" required="true" />
+      <node pkg="techman_arm" name="techman_arm" type="techman_arm_real.py" args="$(arg robot_ip) $(arg planner)" output="screen" required="true" /> 
    </group>
+
    <group if="$(arg simulated)">
+      <arg name="x" default="0"/>
+      <arg name="y" default="0"/>
+      <arg name="z" default="0"/>
+      <arg name="gzclient" default="true" />
+
       <include file="$(find tm5700_gazebo)/launch/gazebo.launch">
          <arg name="client" value="$(arg gzclient)" />
          <arg name="x" value="$(arg x)"/>
@@ -27,6 +30,6 @@
   
    <!-- Start RViz -->
    <group if="$(arg rviz)">
-      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tm5700_model)/launch/config.rviz" required="true" />
+      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find techman_arm)/launch/config.rviz" required="true" />
    </group>
 </launch>

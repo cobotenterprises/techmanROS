@@ -13,16 +13,9 @@ find_package(
    actionlib_msgs
 )
 
-add_message_files(
-   FILES
-   RobotState.msg
-)
-
 add_service_files(
    FILES
    ExitListen.srv
-   GetMode.srv
-   SetTCP.srv
 )
 
 add_action_files(

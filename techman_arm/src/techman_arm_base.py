@@ -7,12 +7,13 @@ from scipy.spatial.transform import Rotation
 
 from sensor_msgs.msg import JointState as JointStateMsg
 from moveit_msgs.msg import MoveItErrorCodes
+from geometry_msgs.msg import Pose as PoseMsg
 
 from dynamic_reconfigure.server import Server
 from techman_arm.cfg import RoboticArmConfig
 
-from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
-from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
+from techman_arm.msg import MoveJointsAction, MoveJointsGoal, MoveJointsFeedback, MoveJointsResult
+from techman_arm.msg import MoveTCPAction, MoveTCPGoal, MoveTCPFeedback, MoveTCPResult
 
 
 class TechmanArm:
@@ -31,10 +32,8 @@ class TechmanArm:
       # Initialise node
       rospy.init_node(self._node_name)
 
-      # Set up publishers
-      self._broadcast_pub = rospy.Publisher(f'/{self._node_name}/state', RobotStateMsg, queue_size = 1)
+      # Set up publisher
       self._joint_states_pub = rospy.Publisher(f'/{self._node_name}/joint_states', JointStateMsg, queue_size = 1)
-      self._tf2_pub = tf2_ros.TransformBroadcaster()
 
       # Set up actions
       self._move_joints_act = actionlib.SimpleActionServer(f'/{self._node_name}/move_joints', MoveJointsAction, execute_cb=self._move_joints, auto_start = False)
@@ -66,16 +65,16 @@ class TechmanArm:
       self._mja_in_feedback = True
       did_succeed = self._execute_goal(goal)
       self._mja_in_feedback = False
-      if did_succeed: self._move_joints_act.set_succeeded(MoveJointsFeedback(self._robot_state))
-      else: self._move_joints_act.set_aborted(MoveJointsFeedback(self._robot_state))
+      if did_succeed: self._move_joints_act.set_succeeded(MoveJointsFeedback(self._joint_state))
+      else: self._move_joints_act.set_aborted(MoveJointsFeedback(self._joint_state))
 
 
    def _move_tcp(self, goal):
       self._mta_in_feedback = True
       did_succeed = self._execute_goal(goal)
       self._mta_in_feedback = False
-      if did_succeed: self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._robot_state))
-      else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))
+      if did_succeed: self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._joint_state))
+      else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._joint_state))
 
 
    def _execute_goal(self, goal):
@@ -102,7 +101,7 @@ class TechmanArm:
    def _plan_moveit_goal(self, goal):
       assert self._planner == 'moveit'
 
-      if isinstance(goal, MoveJointsAction):
+      if isinstance(goal, MoveJointsGoal):
          # Build joints dict
          joints_goal = [np.radians(x) for x in goal.goal]
          if goal.relative:
@@ -113,11 +112,11 @@ class TechmanArm:
 
          # Plan trajectory
          self._moveit_group.set_joint_value_target(joint_dict)
-         plan_success, plan, plan_time, plan_result = self._moveit_group.plan()
+         plan_success, plan, _, plan_result = self._moveit_group.plan()
          if not plan_success: rospy.logwarn(f'Could not plan joint goal: {self._moveit_desc(plan_result)}')
          return plan_success, plan
       
-      if isinstance(goal, MoveTCPAction):
+      if isinstance(goal, MoveTCPGoal):
          goal_pos, goal_rot = None, None
          if goal.relative:
             # Get current pose
@@ -199,7 +198,7 @@ class TechmanArm:
             return conformity >= self.MIN_MOVEIT_CONFORMITY, plan
          else:
             self._moveit_group.set_pose_target(pose_msg(goal_pos, goal_rot))
-            plan_success, plan, plan_time, plan_result = self._moveit_group.plan()
+            plan_success, plan, _, plan_result = self._moveit_group.plan()
             if not plan_success: rospy.logwarn(f'Could not plan pose goal: {self._moveit_desc(plan_result)}')
             return plan_success, plan
 
