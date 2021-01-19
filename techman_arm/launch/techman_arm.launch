@@ -6,9 +6,9 @@
    <!-- Load robot model -->
    <include file="$(find techman_model)/launch/load.launch" />
 
+   <arg name="planner" default="moveit" />
+   <arg name="robot_ip" default="" />
    <group unless="$(arg simulated)">
-      <arg name="planner" default="moveit" />
-      <arg name="robot_ip" default="" />
 
       <!-- Start MoveIt if used for planning -->
       <group if="$(eval planner == 'moveit')">
@@ -32,10 +32,10 @@
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_real.py" args="$(arg robot_ip) $(arg planner)" output="screen" required="true" /> 
    </group>
 
+   <arg name="gz_gui" default="true" />
+   <arg name="gz_world" default="$(find techman_gazebo)/worlds/empty.world" />
+   <arg name="gz_offset" default="0 0 0" />
    <group if="$(arg simulated)">
-      <arg name="gz_gui" default="true" />
-      <arg name="gz_world" default="$(find techman_gazebo)/worlds/empty.world" />
-      <arg name="gz_offset" default="0 0 0" />
 
       <!-- Start Gazebo (and MoveIt) -->
       <include file="$(find techman_gazebo)/launch/gazebo.launch">

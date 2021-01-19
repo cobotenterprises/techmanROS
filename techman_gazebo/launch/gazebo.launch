@@ -20,6 +20,7 @@
    </include>
 
    <!-- Spawn robot model -->
+   <rosparam param="/gazebo/model_offset" subst_value="true">$(arg model_offset)</rosparam>
    <node
       name="spawn_gazebo_model" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
       args="$(eval '-urdf -param robot_description -model techman_robot -x ' + arg('model_offset').split()[0] + ' -y ' + arg('model_offset').split()[1] + ' -z ' + arg('model_offset').split()[2])"

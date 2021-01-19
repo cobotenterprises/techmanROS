@@ -19,7 +19,6 @@ from moveit_commander.conversions import pose_to_list
 from geometry_msgs.msg import Pose as PoseMsg, PoseStamped as PoseStampedMsg
 from sensor_msgs.msg import JointState as JointStateMsg
 
-from techman_arm.msg import RobotState as RobotStateMsg
 from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
 from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 

@@ -96,8 +96,16 @@ class TechmanArm:
          self._move_tcp_act.start()
 
       # Publish action feedback
-      if self._mja_in_feedback: self._move_joints_act.publish_feedback(MoveJointsFeedback(self._joint_state))
-      if self._mta_in_feedback: self._move_tcp_act.publish_feedback(MoveTCPFeedback(self._joint_state))
+      if self._mja_in_feedback: 
+         fod = MoveJointsFeedback(self._joint_state)
+         #print(f'fod: {fod}')
+         fod2 = MoveJointsResult(self._joint_state)
+         #print(f'res fod2: {fod2}')
+         self._move_joints_act.publish_feedback(fod)
+      if self._mta_in_feedback: 
+         fod = MoveTCPFeedback(self._joint_state)
+         #print(f'fod: {fod}')
+         self._move_tcp_act.publish_feedback(fod)
 
 
    def _plan_moveit_goal(self, goal):
