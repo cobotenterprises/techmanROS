@@ -84,6 +84,7 @@ class TechmanArm:
 
    def _on_joint_state(self, joint_state):
       self._joint_state = joint_state
+      self._joint_states_pub.publish(joint_state)
 
       # Start action servers if not started yet
       if not self._mja_started:

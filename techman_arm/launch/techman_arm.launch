@@ -3,9 +3,17 @@
    <arg name="simulated" default="false" />
    <arg name="rviz" default="false" />
 
+   <include file="$(find tm5700_model)/launch/load.launch" />
+
    <group unless="$(arg simulated)">
       <arg name="planner" default="moveit" />
       <arg name="robot_ip" default="" />
+
+      <!-- Start joint state visualizer -->
+      <node pkg="robot_state_publisher" name="robot_state_publisher" type="robot_state_publisher" output="screen" required="true" /> 
+      <node pkg="joint_state_publisher" name="joint_state_publisher" type="joint_state_publisher" output="screen" required="true">
+         <rosparam>source_list: [/techman_arm/joint_states]</rosparam>
+      </node> 
 
       <!-- Start techman arm node -->
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_real.py" args="$(arg robot_ip) $(arg planner)" output="screen" required="true" /> 

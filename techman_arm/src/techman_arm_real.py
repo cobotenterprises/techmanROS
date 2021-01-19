@@ -139,9 +139,7 @@ class TechmanArmReal(TechmanArm):
 
    def _publish_tm_pose(self, name, pos):
       tfmsg = geometry_msgs.msg.TransformStamped()
-      print(rospy.Time.now())
       tfmsg.header.stamp = rospy.Time.now()
-      print(tfmsg.header.stamp)
       tfmsg.header.frame_id = 'world'
       tfmsg.child_frame_id = name
       tfmsg.transform.translation.x = float(pos[0]) / 1_000
