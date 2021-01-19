@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: techman_model
+    relative_path: models/tm5_700_full.xacro
+    xacro_args: ""
+  SRDF:
+    relative_path: config/tm5_700.srdf
+  CONFIG:
+    author_name: Jules van der Toorn
+    author_email: J.vanderToorn@student.tudelft.nl
+    generated_timestamp: 1608458934

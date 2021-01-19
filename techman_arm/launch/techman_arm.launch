@@ -4,7 +4,7 @@
    <arg name="rviz" default="false" />
 
    <!-- Load robot model -->
-   <include file="$(find tm5700_model)/launch/load.launch" />
+   <include file="$(find techman_model)/launch/load.launch" />
 
    <group unless="$(arg simulated)">
       <arg name="planner" default="moveit" />
@@ -12,7 +12,7 @@
 
       <!-- Start MoveIt if used for planning -->
       <group if="$(eval planner == 'moveit')">
-         <include file="$(find tm5700_moveit)/launch/move_group.launch">
+         <include file="$(find techman_moveit)/launch/move_group.launch">
             <arg name="output" value="log"/>
             <arg name="allow_trajectory_execution" value="false"/>
             <arg name="fake_execution" value="false"/>
@@ -34,11 +34,11 @@
 
    <group if="$(arg simulated)">
       <arg name="gz_gui" default="true" />
-      <arg name="gz_world" default="$(find tm5700_gazebo)/worlds/empty.world" />
+      <arg name="gz_world" default="$(find techman_gazebo)/worlds/empty.world" />
       <arg name="gz_offset" default="0 0 0" />
 
       <!-- Start Gazebo (and MoveIt) -->
-      <include file="$(find tm5700_gazebo)/launch/gazebo.launch">
+      <include file="$(find techman_gazebo)/launch/gazebo.launch">
          <arg name="compile_model" value="false" />
          <arg name="client" value="$(arg gz_gui)" />
          <arg name="world_name" value="$(arg gz_world)" />
@@ -51,6 +51,6 @@
   
    <!-- Start RViz -->
    <group if="$(arg rviz)">
-      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find techman_arm)/launch/config.rviz" required="true" />
+      <node name="rviz" pkg="rviz" type="rviz" args="-d $(dirname)/config.rviz" required="true" />
    </group>
 </launch>

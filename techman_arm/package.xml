@@ -5,7 +5,7 @@
    <author email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</author>
    <maintainer email="J.vanderToorn@student.tudelft.nl">Jules van der Toorn</maintainer>
    <description>ROS package to interact with a Techman robotic arm.</description>
-   <license>Apache-License-2.0</license>
+   <license>MIT</license>
 
    <buildtool_depend>catkin</buildtool_depend>
    <build_depend>message_generation</build_depend>

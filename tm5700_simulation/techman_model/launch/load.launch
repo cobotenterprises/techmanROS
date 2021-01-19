@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-   <!-- This file is responsible for compiling the TM5-700 XACRO and loading it into the 'robot_description' parameter -->
-
-  <param name="robot_description" command="$(find xacro)/xacro '$(find tm5700_model)/models/tm5_700_full.xacro'" />
-</launch>
