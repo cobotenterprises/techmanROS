@@ -1,33 +1,16 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import rospy
 import actionlib
-import time
-import dateutil.parser
 import numpy as np
-
-import asyncio
-import techmanpy
-from techmanpy import TechmanException, TMConnectError
-
-import tf_conversions
-import tf2_ros
-import geometry_msgs.msg
+from scipy.spatial.transform import Rotation
 
 from sensor_msgs.msg import JointState as JointStateMsg
-
 from moveit_msgs.msg import MoveItErrorCodes
 
 from dynamic_reconfigure.server import Server
 from techman_arm.cfg import RoboticArmConfig
 
-from techman_arm.srv import ExitListen, ExitListenResponse
-from techman_arm.srv import GetMode, GetModeResponse
-from techman_arm.srv import SetTCP, SetTCPResponse
-
-from techman_arm.msg import RobotState as RobotStateMsg
 from techman_arm.msg import MoveJointsAction, MoveJointsFeedback, MoveJointsResult
 from techman_arm.msg import MoveTCPAction, MoveTCPFeedback, MoveTCPResult
 
@@ -39,13 +22,10 @@ class TechmanArm:
    MIN_MOVEIT_CONFORMITY = 0.95
 
 
-   def __init__(self, node_name, node_name_pretty, planner='moveit'):
+   def __init__(self, node_name, node_name_pretty, planner):
       self._node_name = node_name
       self._node_name_pretty = node_name_pretty
       self._planner = planner
-
-      self._seq_id = 0
-      self._robot_state = None
       self._joint_state = None
 
       # Initialise node
@@ -83,15 +63,45 @@ class TechmanArm:
 
 
    def _move_joints(self, goal):
-      # Implemented by subclass
-      pass
+      self._mja_in_feedback = True
+      did_succeed = self._execute_goal(goal)
+      self._mja_in_feedback = False
+      if did_succeed: self._move_joints_act.set_succeeded(MoveJointsFeedback(self._robot_state))
+      else: self._move_joints_act.set_aborted(MoveJointsFeedback(self._robot_state))
+
 
    def _move_tcp(self, goal):
+      self._mta_in_feedback = True
+      did_succeed = self._execute_goal(goal)
+      self._mta_in_feedback = False
+      if did_succeed: self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._robot_state))
+      else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._robot_state))
+
+
+   def _execute_goal(self, goal):
       # Implemented by subclass
-      pass
+      return False
+
+
+   def _on_joint_state(self, joint_state):
+      self._joint_state = joint_state
+
+      # Start action servers if not started yet
+      if not self._mja_started:
+         self._mja_started = True
+         self._move_joints_act.start()
+      if not self._mta_started:
+         self._mta_started = True
+         self._move_tcp_act.start()
+
+      # Publish action feedback
+      if self._mja_in_feedback: self._move_joints_act.publish_feedback(MoveJointsFeedback(self._joint_state))
+      if self._mta_in_feedback: self._move_tcp_act.publish_feedback(MoveTCPFeedback(self._joint_state))
 
 
    def _plan_moveit_goal(self, goal):
+      assert self._planner == 'moveit'
+
       if isinstance(goal, MoveJointsAction):
          # Build joints dict
          joints_goal = [np.radians(x) for x in goal.goal]
@@ -192,65 +202,6 @@ class TechmanArm:
             plan_success, plan, plan_time, plan_result = self._moveit_group.plan()
             if not plan_success: rospy.logwarn(f'Could not plan pose goal: {self._moveit_desc(plan_result)}')
             return plan_success, plan
-
-
-   def _tmserver_callback(self, items):
-
-      # Publish robot state
-      self._robot_state = RobotStateMsg()
-      self._robot_state.time = rospy.Time()      
-      formatted_time = items['Current_Time']
-      time = dateutil.parser.isoparse(formatted_time).timestamp()
-      self._robot_state.time.secs = int(time)
-      self._robot_state.time.nsecs = int((time % 1) * 1_000_000_000)
-      self._robot_state.joint_pos = items['Joint_Angle']
-      self._robot_state.joint_vel = items['Joint_Speed']
-      self._robot_state.joint_tor = items['Joint_Torque']
-      # self._robot_state.flange_pos = items['Coord_Robot_Flange'] 
-      self._broadcast_pub.publish(self._robot_state)
-
-      # Publish joint state
-      self._seq_id += 1
-      self._joint_state = JointStateMsg()
-      self._joint_state.header.seq = self._seq_id
-      self._joint_state.header.stamp = rospy.Time.now()
-      self._joint_state.name = ['shoulder_1_joint', 'shoulder_2_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-      self._joint_state.position = [np.radians(x) for x in items['Joint_Angle']]
-      self._joint_state.velocity = [np.radians(x) for x in items['Joint_Speed']]
-      self._joint_state.effort = items['Joint_Torque']
-      self._joint_states_pub.publish(self._joint_state)
-
-      # Start action servers if not started yet
-      if not self._mja_started:
-         self._mja_started = True
-         self._move_joints_act.start()
-      if not self._mta_started:
-         self._mta_started = True
-         self._move_tcp_act.start()
-
-      # Publish action feedback
-      if self._mja_in_feedback: self._move_joints_act.publish_feedback(MoveJointsFeedback(self._robot_state))
-      if self._mta_in_feedback: self._move_tcp_act.publish_feedback(MoveTCPFeedback(self._robot_state))
-
-
-   def _publish_reference_frame(self, name, pos, parent='world'):
-      tfmsg = geometry_msgs.msg.TransformStamped()
-      tfmsg.header.stamp = rospy.Time.now()
-      tfmsg.header.frame_id = parent
-      tfmsg.child_frame_id = name
-      tfmsg.transform.translation.x = float(pos[0]) / 1_000
-      tfmsg.transform.translation.y = float(pos[1]) / 1_000
-      tfmsg.transform.translation.z = float(pos[2]) / 1_000
-      q = tf_conversions.transformations.quaternion_from_euler(
-         np.radians(pos[3]),
-         np.radians(pos[4]),
-         np.radians(pos[5])
-      )
-      tfmsg.transform.rotation.x = q[0]
-      tfmsg.transform.rotation.y = q[1]
-      tfmsg.transform.rotation.z = q[2]
-      tfmsg.transform.rotation.w = q[3]
-      self._tf2_pub.sendTransform(tfmsg)
 
 
    def _reconfigure_callback(self, config, level):

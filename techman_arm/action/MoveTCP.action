@@ -5,6 +5,6 @@ float32 speed # percentage (0.0 - 1.0)
 float64[] tcp # [x, y, z]
 float64[] goal # [X, Y, Z, RX, RY, RZ]
 ---
-RobotState state
+sensor_msgs/JointState feedback_state
 ---
-RobotState state
+sensor_msgs/JointState result_state
