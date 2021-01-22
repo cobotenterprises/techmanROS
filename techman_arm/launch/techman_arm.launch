@@ -29,7 +29,7 @@
       </node> 
 
       <!-- Start techman physical arm node -->
-      <node pkg="techman_arm" name="techman_arm" type="techman_arm_real.py" args="$(arg robot_ip) $(arg planner)" output="screen" required="true" /> 
+      <node pkg="techman_arm" name="techman_arm" type="techman_arm_real.py" args="'$(arg robot_ip)' '$(arg planner)'" output="screen" required="true" /> 
    </group>
 
    <arg name="gz_gui" default="true" />
