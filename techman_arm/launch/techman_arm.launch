@@ -16,9 +16,6 @@
             <arg name="output" value="log"/>
             <arg name="allow_trajectory_execution" value="false"/>
             <arg name="fake_execution" value="false"/>
-            <arg name="info" value="false"/>
-            <arg name="debug" value="false"/>
-            <arg name="pipeline" value="ompl"/>
          </include>
       </group>
 
