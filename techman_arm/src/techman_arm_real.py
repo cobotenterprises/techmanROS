@@ -6,6 +6,7 @@ import numpy as np
 import asyncio
 import tf2_ros
 import tf_conversions
+from scipy.spatial.transform import Rotation
 
 import techmanpy
 from techmanpy import TMConnectError
@@ -79,8 +80,12 @@ class TechmanArmReal(TechmanArm):
                         use_precise_positioning=self._precise_positioning
                      )
                   else: 
+                     # Translate goal position based on TCP
+                     tcp_pos = np.array(goal.goal[0:3])
+                     tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
+                     goal_pos = tcp_pos - tcp_rot.apply(np.array(goal.tcp))
                      trsct.move_to_point_ptp(
-                        goal.goal,
+                        [*goal_pos, *goal.goal[3:6]],
                         goal.speed,
                         self._acceleration_duration,
                         use_precise_positioning=self._precise_positioning
