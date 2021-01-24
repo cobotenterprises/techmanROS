@@ -203,7 +203,7 @@ class TechmanArm:
          # Plan goal
          if isinstance(goal_pos, list):
             waypoints = [pose_msg(goal_pos[i], goal_rot[i]) for i in range(len(goal_pos))]
-            plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.01, 0.0)
+            plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.005, 0.0)
             if conformity < self.MIN_MOVEIT_CONFORMITY: rospy.logwarn(f'Could not plan pose goal, deviation was {1 - conformity}')
             return conformity >= self.MIN_MOVEIT_CONFORMITY, plan
          else:

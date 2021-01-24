@@ -50,9 +50,10 @@ class TechmanArmReal(TechmanArm):
 
                # Execute trajectory
                for joint_state in plan.joint_trajectory.points:
-                  trsct.move_to_joint_angles_path(
+                  trsct.move_to_joint_angles_ptp(
                      np.degrees(np.asarray(joint_state.positions)).tolist(),
-                     0, 0, blending_perc=1.0
+                     goal.speed,
+                     0, blending_perc=1.0, use_precise_positioning=False
                   )
 
             if self._planner == 'tmflow':
