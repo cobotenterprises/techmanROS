@@ -16,6 +16,7 @@ find_package(
 add_service_files(
    FILES
    ExitListen.srv
+   StartTransaction.srv
 )
 
 add_action_files(

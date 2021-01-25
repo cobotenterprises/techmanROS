@@ -48,6 +48,9 @@ class TechmanArmReal(TechmanArm):
                plan_success, plan = self._plan_moveit_goal(goal)
                if not plan_success: return False
 
+               # If in transaction, goal was only buffered
+               if self._in_transaction: return True
+
                # Execute trajectory
                for joint_state in plan.joint_trajectory.points:
                   trsct.move_to_joint_angles_ptp(
@@ -73,6 +76,7 @@ class TechmanArmReal(TechmanArm):
                         use_precise_positioning=self._precise_positioning
                      )
                if isinstance(goal, MoveTCPGoal):
+                  # TODO
                   if goal.relative:
                      trsct.move_to_relative_point_ptp(
                         goal.goal,
@@ -85,6 +89,7 @@ class TechmanArmReal(TechmanArm):
                      tcp_pos = np.array(goal.goal[0:3])
                      tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
                      goal_pos = tcp_pos - tcp_rot.apply(np.array(goal.tcp))
+                     # Execute it
                      trsct.move_to_point_ptp(
                         [*goal_pos, *goal.goal[3:6]],
                         goal.speed,
