@@ -36,5 +36,7 @@
    <remap from="/joint_trajectory_action" to="/arm_controller/follow_joint_trajectory"/>
    <include file="$(find techman_moveit)/launch/move_group.launch">
       <arg name="publish_monitored_planning_scene" value="true" />
+      <!-- <arg name="capabilities" value="descartes_capability/MoveGroupDescartesPathService"/>
+      <arg name="disable_capabilities" value="move_group/MoveGroupCartesianPathService"/> -->
    </include>
 </launch>

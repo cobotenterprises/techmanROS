@@ -38,6 +38,7 @@ class TechmanArm:
       self._in_transaction = False
       self._transaction_size = 0
       self._transaction_eut = 0
+      self._transaction_eut_pose = None
       self._transaction_goals = []
       self._transaction_waypoints = []
 
@@ -140,6 +141,45 @@ class TechmanArm:
          return self._transaction_waypoints[-1]
       else: return self._moveit_group.get_current_pose().pose
 
+
+   def _truncate_plan(self, plan, truncate_pose):
+      assert truncate_pose is not None
+
+      # Store pose distances for each planned trajectory point
+      pose_distances = np.empty(len(plan.joint_trajectory.points), dtype=np.float32)
+
+      # Calculate forward kinematics and euclidean pose distance
+      fk_header = Header()
+      fk_header.frame_id = 'world'
+      fk_link_names = self.LINKS
+      fk_robot_state = RobotState()
+      fk_robot_state.joint_state.name = self.JOINTS
+      fk_robot_state.is_diff = False
+      try:
+         for i, traj_point in enumerate(plan.joint_trajectory.points):
+            fk_robot_state.joint_state.position = traj_point.positions
+            fk_robot_state.joint_state.velocity = traj_point.velocities
+            fk_robot_state.joint_state.effort = traj_point.effort
+            fk_res = self._lookup_ik(fk_header, fk_link_names, fk_robot_state)
+            poses, links = fk_res.pose_stamped, fk_res.fk_link_names
+            assert links[-1] == 'wrist_3_link'
+            pose_diff = []
+            pose_diff.append(truncate_pose.position.x - poses[-1].pose.position.x)
+            pose_diff.append(truncate_pose.position.y - poses[-1].pose.position.y)
+            pose_diff.append(truncate_pose.position.z - poses[-1].pose.position.z)
+            pose_diff.append(truncate_pose.orientation.x - poses[-1].pose.orientation.x)
+            pose_diff.append(truncate_pose.orientation.y - poses[-1].pose.orientation.y)
+            pose_diff.append(truncate_pose.orientation.z - poses[-1].pose.orientation.z)
+            pose_diff.append(truncate_pose.orientation.w - poses[-1].pose.orientation.w)
+            pose_distances[i] = np.linalg.norm(pose_diff)
+      except rospy.ServiceException as e: print("Service call failed: %s"%e)
+
+      # Truncate plan to pose that is closest to the requested pose
+      print(f'Truncating plan from size {len(plan.joint_trajectory.points)} to size {np.argmin(pose_distances) + 1}')
+      plan.joint_trajectory.points = plan.joint_trajectory.points[:np.argmin(pose_distances) + 1]
+      return plan
+
+
    def _plan_moveit_goal(self, goal):
       assert self._planner == 'moveit'
 
@@ -174,7 +214,8 @@ class TechmanArm:
             if goal.linear:
                goal_pos, goal_rot = [], []
                path_res = int(max(np.linalg.norm(np.array(goal.goal)[0:3]), np.linalg.norm(np.array(goal.goal)[3:6])))
-               if path_res == 0: path_res += 1
+               if path_res == 0: path_res = 1
+               path_res = 4
                for i in range(path_res):
                   subgoal = np.array(goal.goal) * (i + 1)/path_res
                   # Translate and rotate relative
@@ -208,7 +249,7 @@ class TechmanArm:
                # Interpolate trajectory
                goal_pos, goal_rot = [], []
                path_res = int(max(np.linalg.norm(goal_tcp_pos - curr_tcp_pos), np.linalg.norm(relative_rot)))
-               if path_res == 0: path_res += 1
+               if path_res == 0: path_res = 1
                for i in range(path_res):
                   subpos = goal_tcp_pos - (path_res - i - 1)/path_res * (goal_tcp_pos - curr_tcp_pos)
                   subrot = Rotation.from_euler('xyz', goal_tcp_rot.as_euler('xyz', degrees=True) - (path_res - i - 1)/path_res * relative_rot, degrees=True)
@@ -243,6 +284,7 @@ class TechmanArm:
             self._transaction_goals.append(goal)
             self._transaction_waypoints.extend(waypoints)
             self._publish_waypoints(self._transaction_waypoints)
+            if len(self._transaction_goals) == self._transaction_eut: self._transaction_eut_pose = self._transaction_waypoints[-1]
             if len(self._transaction_goals) == self._transaction_size: waypoints = self._transaction_waypoints
             else: return True, None
          else: self._publish_waypoints(waypoints)
@@ -250,36 +292,27 @@ class TechmanArm:
          # Plan goal
          if len(waypoints) == 1:
             self._moveit_group.set_pose_target(waypoints[0])
+            self._moveit_group.constrain
             plan_success, plan, _, plan_result = self._moveit_group.plan()
             if not plan_success: rospy.logwarn(f'Could not plan pose goal: {self._moveit_desc(plan_result)}')
             return plan_success, plan
          else:
-            plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.005, 0.0)
+            print('waypoints:')
+            for waypoint in waypoints:
+               print(waypoint)
+            plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.01, 0)
+            self._moveit_group.comp
 
             if self._in_transaction:
+               if self._transaction_eut != -1:
+                  plan = self._truncate_plan(plan, self._transaction_eut_pose)
                self._in_transaction = False
-
-               fk_header = Header()
-               fk_header.frame_id = 'world'
-               fk_link_names = self.LINKS
-               fk_robot_state = RobotState()
-               fk_robot_state.joint_state.name = self.JOINTS
-               fk_robot_state.is_diff = False
-               try:
-                  for traj_point in plan.joint_trajectory.points:
-                     fk_robot_state.joint_state.position = traj_point.positions
-                     fk_robot_state.joint_state.velocity = traj_point.velocities
-                     fk_robot_state.joint_state.effort = traj_point.effort
-                     fk_res = self._lookup_ik(fk_header, fk_link_names, fk_robot_state)
-                     print(fk_res)
-                     poses, links = fk_res.pose_stamped, fk_res.fk_link_names
-                     print(f'got pose for {links}')
-               except rospy.ServiceException as e: print("Service call failed: %s"%e)
 
             if conformity < self.MIN_MOVEIT_CONFORMITY:
                rospy.logwarn(f'Could not plan pose goal, deviation was {1 - conformity}')
-               return False, None
-            else: return True, plan
+               #return False, None
+            #else: 
+            return True, plan
 
 
    def _publish_waypoints(self, waypoints):
