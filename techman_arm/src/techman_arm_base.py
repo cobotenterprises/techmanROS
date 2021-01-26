@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 
 import rospy
+import tf2_ros
 import actionlib
 import numpy as np
-import tf2_ros
 from scipy.spatial.transform import Rotation
 
 from sensor_msgs.msg import JointState as JointStateMsg
-from moveit_msgs.msg import MoveItErrorCodes, RobotState
-from geometry_msgs.msg import Pose as PoseMsg, TransformStamped as TransformStampedMsg
-from moveit_msgs.srv import GetPositionFK
-from std_msgs.msg import Header
+from moveit_msgs.msg import MoveItErrorCodes
+from geometry_msgs.msg import Pose as PoseMsg
 
 from dynamic_reconfigure.server import Server
 from techman_arm.cfg import RoboticArmConfig
 
 from techman_arm.msg import MoveJointsAction, MoveJointsGoal, MoveJointsFeedback, MoveJointsResult
 from techman_arm.msg import MoveTCPAction, MoveTCPGoal, MoveTCPFeedback, MoveTCPResult
-from techman_arm.srv import StartTransaction, StartTransactionResponse
 
 
 class TechmanArm:
@@ -34,13 +31,6 @@ class TechmanArm:
       self._planner = planner
       self._joint_state = None
 
-      # Transaction related variables
-      self._in_transaction = False
-      self._transaction_size = 0
-      self._transaction_eut = 0
-      self._transaction_goals = []
-      self._transaction_waypoints = []
-
       # Initialise node
       rospy.init_node(self._node_name)
 
@@ -53,9 +43,6 @@ class TechmanArm:
       self._move_tcp_act = actionlib.SimpleActionServer(f'/{self._node_name}/move_tcp', MoveTCPAction, execute_cb=self._move_tcp, auto_start = False)
       self._mja_started, self._mta_started = False, False
       self._mja_in_feedback, self._mta_in_feedback = False, False
-
-      # Set up service
-      rospy.Service(f'/{self._node_name}/start_transaction', StartTransaction, self._start_transaction)
 
       # Bind callbacks
       rospy.on_shutdown(self._shutdown_callback)
@@ -74,19 +61,8 @@ class TechmanArm:
                val = getattr(MoveItErrorCodes, attr)
                if isinstance(val, int) and val == result_code: return attr
          self._moveit_desc = moveit_desc
-         rospy.wait_for_service('/compute_fk')
-         self._lookup_ik = rospy.ServiceProxy('/compute_fk', GetPositionFK)
 
       rospy.loginfo(f'{self._node_name_pretty} has started.')
-
-
-   def _start_transaction(self, args):
-      self._in_transaction = True
-      self._transaction_size = args.size
-      self._transaction_eut = args.execute_up_to
-      self._transaction_goals = []
-      self._transaction_waypoints = []
-      return StartTransactionResponse()
 
 
    def _move_joints(self, goal):
@@ -135,17 +111,10 @@ class TechmanArm:
          self._move_tcp_act.publish_feedback(fod)
 
 
-   def _get_current_pose(self):
-      if self._in_transaction and len(self._transaction_waypoints) > 0:
-         return self._transaction_waypoints[-1]
-      else: return self._moveit_group.get_current_pose().pose
-
    def _plan_moveit_goal(self, goal):
       assert self._planner == 'moveit'
 
       if isinstance(goal, MoveJointsGoal):
-         if self._in_transaction: return True, None
-
          # Build joints dict
          joints_goal = [np.radians(x) for x in goal.goal]
          if goal.relative:
@@ -164,7 +133,7 @@ class TechmanArm:
          goal_pos, goal_rot = None, None
          if goal.relative:
             # Get current pose
-            curr_pose_msg = self._get_current_pose()
+            curr_pose_msg = self._moveit_group.get_current_pose().pose
             cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
             curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
             curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
@@ -191,7 +160,7 @@ class TechmanArm:
          else:
             if goal.linear:
                # Get current pose
-               curr_pose_msg = self._get_current_pose()
+               curr_pose_msg = self._moveit_group.get_current_pose().pose
                cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
                curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
                curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
@@ -234,54 +203,19 @@ class TechmanArm:
             pose_goal.position.z = pos[2] / 1_000
             return pose_goal
 
-         # Build waypoints
-         if not isinstance(goal_pos, list): waypoints = [pose_msg(goal_pos, goal_rot)]
-         else: waypoints = [pose_msg(goal_pos[i], goal_rot[i]) for i in range(len(goal_pos))]
-            
-         # Save waypoints if in transaction
-         if self._in_transaction:
-            self._transaction_goals.append(goal)
-            self._transaction_waypoints.extend(waypoints)
-            self._publish_waypoints(self._transaction_waypoints)
-            if len(self._transaction_goals) == self._transaction_size: waypoints = self._transaction_waypoints
-            else: return True, None
-         else: self._publish_waypoints(waypoints)
-
          # Plan goal
-         if len(waypoints) == 1:
-            self._moveit_group.set_pose_target(waypoints[0])
+         if isinstance(goal_pos, list):
+            waypoints = [pose_msg(goal_pos[i], goal_rot[i]) for i in range(len(goal_pos))]
+            plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.005, 0.0)
+            if conformity < self.MIN_MOVEIT_CONFORMITY: rospy.logwarn(f'Could not plan pose goal, deviation was {1 - conformity}')
+            return conformity >= self.MIN_MOVEIT_CONFORMITY, plan
+         else:
+            self._moveit_group.set_pose_target(pose_msg(goal_pos, goal_rot))
             plan_success, plan, _, plan_result = self._moveit_group.plan()
             if not plan_success: rospy.logwarn(f'Could not plan pose goal: {self._moveit_desc(plan_result)}')
             return plan_success, plan
-         else:
-            plan, conformity = self._moveit_group.compute_cartesian_path(waypoints, 0.005, 0.0)
 
-            if self._in_transaction:
-               self._in_transaction = False
-
-               fk_header = Header()
-               fk_header.frame_id = 'world'
-               fk_link_names = self.LINKS
-               fk_robot_state = RobotState()
-               fk_robot_state.joint_state.name = self.JOINTS
-               fk_robot_state.is_diff = False
-               try:
-                  for traj_point in plan.joint_trajectory.points:
-                     fk_robot_state.joint_state.position = traj_point.positions
-                     fk_robot_state.joint_state.velocity = traj_point.velocities
-                     fk_robot_state.joint_state.effort = traj_point.effort
-                     fk_res = self._lookup_ik(fk_header, fk_link_names, fk_robot_state)
-                     print(fk_res)
-                     poses, links = fk_res.pose_stamped, fk_res.fk_link_names
-                     print(f'got pose for {links}')
-               except rospy.ServiceException as e: print("Service call failed: %s"%e)
-
-            if conformity < self.MIN_MOVEIT_CONFORMITY:
-               rospy.logwarn(f'Could not plan pose goal, deviation was {1 - conformity}')
-               return False, None
-            else: return True, plan
-
-
+   
    def _publish_waypoints(self, waypoints):
       for i, waypoint in enumerate(waypoints):
          tfmsg = TransformStampedMsg()

@@ -48,9 +48,6 @@ class TechmanArmReal(TechmanArm):
                plan_success, plan = self._plan_moveit_goal(goal)
                if not plan_success: return False
 
-               # If in transaction, goal was only buffered
-               if self._in_transaction: return True
-
                # Execute trajectory
                for joint_state in plan.joint_trajectory.points:
                   trsct.move_to_joint_angles_ptp(
