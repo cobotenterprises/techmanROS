@@ -20,7 +20,7 @@ find_package(Eigen3 REQUIRED)
 add_service_files(
    FILES
    ExitListen.srv
-   CheckPose.srv
+   FindIKCandidates.srv
 )
 
 add_action_files(
