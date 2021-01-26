@@ -23,9 +23,6 @@ class TechmanArmSim(TechmanArm):
       plan_success, plan = self._plan_moveit_goal(goal)
       if not plan_success: return False
 
-      # If in transaction, goal was only buffered
-      if self._in_transaction: return True 
-
       # Execute it
       did_succeed = self._moveit_group.execute(plan, wait=True)
       self._moveit_group.clear_pose_targets()

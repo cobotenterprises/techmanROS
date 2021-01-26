@@ -11,12 +11,16 @@ find_package(
    message_generation
    dynamic_reconfigure
    actionlib_msgs
+   roscpp
+   moveit_ros_planning_interface
 )
+
+find_package(Eigen3 REQUIRED)
 
 add_service_files(
    FILES
    ExitListen.srv
-   StartTransaction.srv
+   CheckPose.srv
 )
 
 add_action_files(
@@ -50,3 +54,10 @@ catkin_package(
 )
 
 include_directories(${catkin_INCLUDE_DIRS})
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIRS})
+
+add_executable(find_ik_candidates src/find_ik_candidates.cpp)
+target_link_libraries(find_ik_candidates ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+install(TARGETS find_ik_candidates DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
