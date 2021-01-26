@@ -8,6 +8,7 @@
 #include <moveit/robot_state/robot_state.h>
 
 #include "techman_arm/FindIKCandidates.h"
+#include <typeinfo>
 
 using namespace moveit;
 
@@ -15,115 +16,75 @@ robot_state::RobotStatePtr* robot_state_ptr;
 moveit::core::JointModelGroup* joint_model_group_ptr;
 planning_scene_monitor::PlanningSceneMonitor* planning_scene_monitor_ptr;
 
-std::vector<const double*> candidates;
+std::vector<double> candidates;
 
-// bool collect_candidates(
-//    robot_state::RobotState* state,
-//    const robot_model::JointModelGroup* jmg,
-//    const double* joint_angles
-// ) {
-//    // Normalize angles
+bool collect_candidates(
+   robot_state::RobotState* robot_state_cb,
+   const robot_model::JointModelGroup* joint_model_group_cb,
+   const double* joint_angles
+) {
 
-//    // Check if not too close to previous candidates
+   std::vector<double> candidate;
+   for(size_t i = 0; i < 6; i++ ) {
+      // Convert to degrees
+      double deg = std::fmod(*(joint_angles + i) * (180.0/3.141592653589793238463), 360.0);
 
-//    // Apply joint positions
-//    state->setJointGroupPositions(jmg, joint_positions);
-//    state->update();
+      // Normalize between -180 and 180
+      deg = std::fmod(deg + 180, 360.0);
+      if (deg < 0) { deg += 360; }
+      deg -= 180;
 
-//    // Get Joint Values
-//    // ^^^^^^^^^^^^^^^^
-//    // We can retreive the current set of joint values stored in the state for the Panda arm.
-//    std::vector<double> joint_values;
-//    const std::vector<std::string>& joint_names = jmg->getVariableNames();
-//    state->copyJointGroupPositions(jmg, joint_values);
-//    for (std::size_t i = 0; i < joint_names.size(); ++i)
-//    {
-//       ROS_INFO("Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
-//    }
+      candidate.push_back(deg);
+   }
 
-//    if( planning_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) ){
-//       ROS_INFO("Got colliding state, skipping...");
-//       return false;
-//    } else {
-//       ROS_INFO("No collisions found...");
-//       return true;
-//    }
-// }
+   // std::cout << "Angles: [ ";
+   // for (std::vector<double>::const_iterator i = candidate.begin(); i != candidate.end(); ++i) {
+   //    std::cout << *i << ' ';
+   // }
+   // std::cout << "]" << std::endl;
 
-bool find_ik_candidates(techman_arm::FindIKCandidates::Request &req, techman_arm::FindIKCandidates::Request &res) {
-   ROS_INFO("Checkpoint");
-   return true;
+   bool all_too_small = false;
+   for (int csi = 0; csi < candidates.size(); ++csi) {
+      if (csi % 6 == 0) {
+         if (all_too_small) { break; }
+         all_too_small = true;
+      }
+
+      // std::cout << "index: " << csi << ", cs: " << candidates[csi] << ", c: " << candidate[csi % 6] << std::endl;
+      double deg_diff = candidates[csi] - candidate[csi % 6];
+      deg_diff += (deg_diff > 180.0) ? -360.0 : (deg_diff < -180.0) ? 360.0 : 0.0;
+      // std::cout << "diff: " << deg_diff << std::endl;
+      if (deg_diff < -10 || deg_diff > 10) { all_too_small = false; }
+   }
+
+   if (!all_too_small) {
+      // Save this pose if it does not cause collisions
+      robot_state_cb->setJointGroupPositions(joint_model_group_cb, joint_angles);
+      robot_state_cb->update();
+      bool pose_collides = (*planning_scene_monitor_ptr).getPlanningScene()->isStateColliding(const_cast<const robot_state::RobotState&>(*robot_state_cb), joint_model_group_cb->getName());
+      if (!pose_collides) {
+         candidates.insert(candidates.end(), candidate.begin(), candidate.end());
+         // std::cout << "Saved candidate" << std::endl;
+      }
+   } 
+   // else { std::cout << "All joints too similar to selected candidate, skipping..." << std::endl; }
+
+   // if (candidates.size() == 10 * 6) {
+   //    std::cout << "Obtained 10 joint states!" << std::endl;
+   //    return true;
+   // }
+
+   return false;
 }
 
+bool find_ik_candidates(techman_arm::FindIKCandidates::Request &req, techman_arm::FindIKCandidates::Response &res) {
 
-//    // Get kinematic state
-//    robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-//    robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
-//    robot_state::RobotStatePtr kinematic_state(new moveit::core::RobotState(kinematic_model));
-//    kinematic_state->setToDefaultValues();
+   candidates.clear();
+   (*robot_state_ptr)->setFromIK(joint_model_group_ptr, req.pose, 0.3, collect_candidates);
+   res.joint_angles = candidates;
 
-//    // Get joint model group
-//    const moveit::core::JointModelGroup* joint_model_group = kinematic_model->getJointModelGroup("manipulator");
-
-//    std::vector<double> joint_values;
-//    kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
-//    for (std::size_t i = 0; i < req.joints.size(); ++i)
-//    {
-//       // ROS_INFO("Joint %d: %f", i, req.joints[i]);
-//       joint_values[i] = (double) req.joints[i];
-//    }
-//    kinematic_state->setJointGroupPositions(joint_model_group, joint_values);
-//    kinematic_state->update();
-
-//    std::vector<double> joint_values_2;
-//    const std::vector<std::string>& joint_names = joint_model_group->getVariableNames();
-//    kinematic_state->copyJointGroupPositions(joint_model_group, joint_values_2);
-//    for (std::size_t i = 0; i < joint_names.size(); ++i)
-//    {
-//       ROS_INFO("Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
-//    }
-
-//    // Get planning scene
-//    planning_scene_monitor::PlanningSceneMonitor planning_scene_monitor("robot_description");
-//    planning_scene_monitor.startSceneMonitor("/move_group/monitored_planning_scene");
-//    bool success = planning_scene_monitor.requestPlanningSceneState("/get_planning_scene");
-
-//    //planning_scene::PlanningScene planning_scene = (*psm->getPlanningScene();
-//    // lanning_interface::PlanningSceneInterface planning_scene_interface;
-//    // plannin::PlanningSceneInterface planning_scene_interface;
-//    auto planning_scenee = planning_scene_monitor.getPlanningScene();
-//    planning_scenee->printKnownObjects(std::cout);
-
-//    // std::map<std::string, moveit_msgs::CollisionObject> objects = planning_scene_interface.getObjects();
-//    // for (std::map<std::string, moveit_msgs::CollisionObject>::const_iterator
-//    //       iter = objects.begin();
-//    //    iter != objects.end(); iter++) {
-
-//    //    std::cout << "Key: " << iter->first << std::endl << "Values:" << std::endl;
-//    // }
-
-//    if(  planning_scenee->isStateColliding(const_cast<const robot_state::RobotState&>(*kinematic_state), joint_model_group->getName()) ){
-//       ROS_INFO("This WILL collide");
-//    } else {
-//       ROS_INFO("This WONT collide");
-//    }
-   
-//    // if (false) {
-//    //    const moveit::core::GroupStateValidityCallbackFn is_valid=
-//    //       std::bind(
-//    //          &isValid,
-//    //          &planning_scene,
-//    //          std::placeholders::_1,
-//    //          std::placeholders::_2,
-//    //          std::placeholders::_3);
-
-//    //    const Eigen::Isometry3d& end_effector_state = kinematic_state->getGlobalLinkTransform("tool0");
-
-//    //    kinematic_state->setFromIK(joint_model_group, end_effector_state, 5, is_valid);
-//    // }
-
-//    return true;
-// }
+   return true;
+}
 
 int main(int argc, char** argv) {
    ros::init(argc, argv, "find_ik_candidates");
