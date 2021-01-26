@@ -7,14 +7,16 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 from sensor_msgs.msg import JointState as JointStateMsg
-from moveit_msgs.msg import MoveItErrorCodes
-from geometry_msgs.msg import Pose as PoseMsg
+from moveit_msgs.msg import MoveItErrorCodes, PositionIKRequest, Constraints, JointConstraint
+from geometry_msgs.msg import Pose as PoseMsg, TransformStamped as TransformStampedMsg
+from moveit_msgs.srv import GetPositionIK, GetStateValidity
 
 from dynamic_reconfigure.server import Server
 from techman_arm.cfg import RoboticArmConfig
 
 from techman_arm.msg import MoveJointsAction, MoveJointsGoal, MoveJointsFeedback, MoveJointsResult
 from techman_arm.msg import MoveTCPAction, MoveTCPGoal, MoveTCPFeedback, MoveTCPResult
+from techman_arm.srv import FindIKCandidates
 
 
 class TechmanArm:
@@ -23,6 +25,7 @@ class TechmanArm:
    JOINTS = ['shoulder_1_joint', 'shoulder_2_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
    LINKS = ['arm_1_link', 'arm_2_link', 'shoulder_1_link', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link']
    MIN_MOVEIT_CONFORMITY = 0.95
+   MAX_LINEAR_JOINT_FLUCTUATION = 20
 
 
    def __init__(self, node_name, node_name_pretty, planner):
@@ -30,6 +33,12 @@ class TechmanArm:
       self._node_name_pretty = node_name_pretty
       self._planner = planner
       self._joint_state = None
+
+      # Linear buffer variables
+      self._in_linear_buffer = False
+      self._linear_buffer_size = -1
+      self._linear_buffer_start_pose = None
+      self._linear_buffer_waypoints = []
 
       # Initialise node
       rospy.init_node(self._node_name)
@@ -61,6 +70,15 @@ class TechmanArm:
                val = getattr(MoveItErrorCodes, attr)
                if isinstance(val, int) and val == result_code: return attr
          self._moveit_desc = moveit_desc
+         # Get proxy for IK candidates lookup
+         rospy.wait_for_service(f'/{self._node_name}/find_ik_candidates')
+         self._compute_ik_cands = rospy.ServiceProxy(f'/{self._node_name}/find_ik_candidates', FindIKCandidates)
+         # Get proxy for IK lookup
+         rospy.wait_for_service('/compute_ik')
+         self._compute_ik = rospy.ServiceProxy('/compute_ik', GetPositionIK)
+         # Get proxy for collision check
+         rospy.wait_for_service('/check_state_validity')
+         self._check_state_validity = rospy.ServiceProxy('/check_state_validity', GetStateValidity)
 
       rospy.loginfo(f'{self._node_name_pretty} has started.')
 
@@ -111,10 +129,88 @@ class TechmanArm:
          self._move_tcp_act.publish_feedback(fod)
 
 
+   def _obtain_linear_buffer_path(self):
+      assert self._planner == 'moveit'
+
+      ik_cands = self._compute_ik_cands(self._linear_buffer_start_pose).joint_angles
+      if len(ik_cands) == 0:
+         rospy.logerr('No IK candidates found for the requested pose')
+         return None
+      print(f'Checking {int(len(ik_cands)/6)} candidates')
+
+      # Define joint constraint builder function
+      def build_joint_constraints(joint_state):
+         joint_constraints = []
+         for i, joint_angle in enumerate(joint_state):
+            jc = JointConstraint()
+            jc.joint_name = self.JOINTS[i]
+            jc.position = joint_angle
+            jc.tolerance_above = np.radians(self.MAX_LINEAR_JOINT_FLUCTUATION)
+            jc.tolerance_below = np.radians(self.MAX_LINEAR_JOINT_FLUCTUATION)
+            jc.weight = 1.0
+            joint_constraints.append(jc)
+         return joint_constraints
+      
+      # Build robot state message
+      robot_state = self._moveit_robot.get_current_state()
+      robot_state.attached_collision_objects = self._moveit_scene.get_attached_objects().values()
+      robot_state.joint_state.velocity = []
+      robot_state.joint_state.effort = []
+      robot_state.joint_state.position = [0, 0, 0, 0, 0, 0]
+
+      # Build IK request message
+      ik_request = PositionIKRequest()
+      ik_request.group_name = "manipulator"
+      ik_request.robot_state = robot_state
+      ik_request.avoid_collisions = True
+      ik_request.pose_stamped.header.frame_id = 'world'
+      ik_request.timeout = rospy.Duration(secs=0.05)
+
+      for ikc_i in range(0, len(ik_cands), 6):
+         start_joint_state = np.radians(ik_cands[ikc_i:ikc_i+6])
+
+         robot_state.joint_state.position[0:6] = start_joint_state
+         is_valid = self._check_state_validity(robot_state, "manipulator", Constraints()).valid
+         if not is_valid: print(f'Invalid: {ik_cands[ikc_i:ikc_i+6]}'); continue
+         print(f'Valid: {ik_cands[ikc_i:ikc_i+6]}')
+
+         motion_path, finished_chain = [start_joint_state.tolist()], True
+         ik_request.constraints.joint_constraints = build_joint_constraints(start_joint_state)
+         for waypoints in self._linear_buffer_waypoints:
+            for waypoint in waypoints:
+               ik_request.pose_stamped.pose = waypoint
+               ik_res = self._compute_ik(ik_request)
+               if ik_res.error_code.val != 1:
+                  print('Couldn\'t finish linear chain, skipping')
+                  finished_chain = False
+                  break
+               # Update constrains for next waypoint
+               joint_values = ik_res.solution.joint_state.position
+               ik_request.constraints.joint_constraints = build_joint_constraints(joint_values)
+               motion_path.append(list(joint_values))
+            if not finished_chain: break
+
+         if finished_chain:
+            print('Found valid begin joint state!')
+            return motion_path
+      
+      print('Couldn\'t find valid joint state after going through all candidates')
+      return None
+
+
+   def _get_current_pose(self):
+      if self._in_linear_buffer:
+         if len(self._linear_buffer_waypoints) == 0: return self._linear_buffer_start_pose
+         else: return self._linear_buffer_waypoints[-1][-1]
+      else: return self._moveit_group.get_current_pose().pose
+
+
    def _plan_moveit_goal(self, goal):
       assert self._planner == 'moveit'
 
       if isinstance(goal, MoveJointsGoal):
+         if self._in_linear_buffer: return True, None
+
          # Build joints dict
          joints_goal = [np.radians(x) for x in goal.goal]
          if goal.relative:
@@ -133,7 +229,7 @@ class TechmanArm:
          goal_pos, goal_rot = None, None
          if goal.relative:
             # Get current pose
-            curr_pose_msg = self._moveit_group.get_current_pose().pose
+            curr_pose_msg = self._get_current_pose()
             cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
             curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
             curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
@@ -152,6 +248,8 @@ class TechmanArm:
                   goal_pos.append(tcp_pos - tcp_rot.apply(np.array(goal.tcp)))
                   goal_rot.append(tcp_rot)
             else:
+               if self._in_linear_buffer: return True, None
+
                # Translate and rotate relative
                tcp_pos = curr_tcp_pos + curr_rot.apply(goal.goal[0:3])
                tcp_rot = curr_rot * Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
@@ -160,7 +258,7 @@ class TechmanArm:
          else:
             if goal.linear:
                # Get current pose
-               curr_pose_msg = self._moveit_group.get_current_pose().pose
+               curr_pose_msg = self._get_current_pose()
                cpmp, cpmo = curr_pose_msg.position, curr_pose_msg.orientation
                curr_pos = np.array([cpmp.x, cpmp.y, cpmp.z]) * 1_000
                curr_rot = Rotation.from_quat(np.array([cpmo.x, cpmo.y, cpmo.z, cpmo.w]))
@@ -184,6 +282,8 @@ class TechmanArm:
                   goal_pos.append(subpos - subrot.apply(np.array(goal.tcp)))
                   goal_rot.append(subrot)
             else:
+               if self._in_linear_buffer: return True, None
+
                tcp_pos = np.array(goal.goal[0:3])
                tcp_rot = Rotation.from_euler('xyz', np.array(goal.goal[3:6]), degrees=True)
                goal_pos = tcp_pos - tcp_rot.apply(np.array(goal.tcp))
@@ -202,6 +302,39 @@ class TechmanArm:
             pose_goal.position.y = pos[1] / 1_000
             pose_goal.position.z = pos[2] / 1_000
             return pose_goal
+      
+         if goal.prepare_linear > 0:
+            self._in_linear_buffer = True
+            self._linear_buffer_size = goal.prepare_linear
+
+         if self._in_linear_buffer:
+            if self._linear_buffer_start_pose is None:
+               # Store start pose
+               assert not isinstance(goal_pos, list)
+               self._linear_buffer_start_pose = pose_msg(goal_pos, goal_rot)
+            else:
+               # Store linear path
+               assert isinstance(goal_pos, list)
+               self._linear_buffer_waypoints.append([pose_msg(goal_pos[i], goal_rot[i]) for i in range(len(goal_pos))])
+            self._publish_waypoints([item for sublist in self._linear_buffer_waypoints for item in sublist])
+            if len(self._linear_buffer_waypoints) < self._linear_buffer_size: return True, None
+            else:
+               # Calculate linear buffer start pose
+               motion_path = self._obtain_linear_buffer_path()
+
+               # Reset linear buffer variables
+               self._in_linear_buffer = False
+               self._linear_buffer_size = -1
+               self._linear_buffer_start_pose = None
+               self._linear_buffer_waypoints = []
+
+               # Check if joint state was found
+               if motion_path is None:
+                  rospy.logerr('Could not plan buffered linear goal')
+                  return False, None
+
+               # Return the motion path
+               return True, motion_path
 
          # Plan goal
          if isinstance(goal_pos, list):
@@ -212,6 +345,11 @@ class TechmanArm:
          else:
             self._moveit_group.set_pose_target(pose_msg(goal_pos, goal_rot))
             plan_success, plan, _, plan_result = self._moveit_group.plan()
+            #plan.joint_trajectory.points = plan.joint_trajectory.points[-1:]
+            for i in range(len(plan.joint_trajectory.points)):
+               plan.joint_trajectory.points[i].time_from_start.secs = 0
+               plan.joint_trajectory.points[i].time_from_start.nsecs = i + 1
+            print(plan)
             if not plan_success: rospy.logwarn(f'Could not plan pose goal: {self._moveit_desc(plan_result)}')
             return plan_success, plan
 

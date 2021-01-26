@@ -48,6 +48,9 @@ class TechmanArmReal(TechmanArm):
                plan_success, plan = self._plan_moveit_goal(goal)
                if not plan_success: return False
 
+               # Buffer exection when plan is part of linear preparation
+               if plan is None: return True
+
                # Execute trajectory
                for joint_state in plan.joint_trajectory.points:
                   trsct.move_to_joint_angles_ptp(

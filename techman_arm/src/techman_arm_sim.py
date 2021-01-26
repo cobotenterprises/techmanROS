@@ -23,11 +23,20 @@ class TechmanArmSim(TechmanArm):
       plan_success, plan = self._plan_moveit_goal(goal)
       if not plan_success: return False
 
-      # Execute it
-      did_succeed = self._moveit_group.execute(plan, wait=True)
-      self._moveit_group.clear_pose_targets()
-      self._moveit_group.stop()
-      return did_succeed
+      # Buffer exection when plan is part of linear preparation
+      if plan is None: return True
+
+      if isinstance(plan, list):
+         # Execute joints path
+         for i, joint_state in enumerate(plan):
+            self._moveit_group.go(joint_state, wait=True)
+         return True
+      else:
+         # Execute MoveIt plan
+         did_succeed = self._moveit_group.execute(plan, wait=True)
+         self._moveit_group.clear_pose_targets()
+         self._moveit_group.stop()
+         return did_succeed
 
 
 if __name__ == '__main__': 

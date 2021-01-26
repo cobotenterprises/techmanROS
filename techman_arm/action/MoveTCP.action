@@ -1,4 +1,5 @@
 bool relative
+int32 prepare_linear
 bool linear
 float32 speed # percentage (0.0 - 1.0)
 

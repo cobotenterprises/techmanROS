@@ -17,6 +17,9 @@
             <arg name="allow_trajectory_execution" value="false"/>
             <arg name="fake_execution" value="false"/>
          </include>
+
+         <!-- Start IK candidate finder -->
+         <node pkg="techman_arm" name="find_ik_candidates" type="find_ik_candidates" output="screen" required="true" /> 
       </group>
 
       <!-- Start joint state visualizer -->
@@ -41,6 +44,9 @@
          <arg name="world_name" value="$(arg gz_world)" />
          <arg name="model_offset" value="$(arg gz_offset)" />
       </include>
+
+      <!-- Start IK candidate finder -->
+      <node pkg="techman_arm" name="find_ik_candidates" type="find_ik_candidates" output="screen" required="true" /> 
 
       <!-- Start techman simulated arm node -->
       <node pkg="techman_arm" name="techman_arm" type="techman_arm_sim.py" output="screen" required="true" />
