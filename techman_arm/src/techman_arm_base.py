@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import tf2_ros
 import actionlib
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -20,6 +21,7 @@ class TechmanArm:
    ''' Base class for Techman robotic arm nodes. '''
 
    JOINTS = ['shoulder_1_joint', 'shoulder_2_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+   LINKS = ['arm_1_link', 'arm_2_link', 'shoulder_1_link', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link']
    MIN_MOVEIT_CONFORMITY = 0.95
 
 
@@ -32,7 +34,8 @@ class TechmanArm:
       # Initialise node
       rospy.init_node(self._node_name)
 
-      # Set up publisher
+      # Set up publishers
+      self._tf2_pub = tf2_ros.TransformBroadcaster()
       self._joint_states_pub = rospy.Publisher(f'/{self._node_name}/joint_states', JointStateMsg, queue_size = 1)
 
       # Set up actions
@@ -211,6 +214,19 @@ class TechmanArm:
             plan_success, plan, _, plan_result = self._moveit_group.plan()
             if not plan_success: rospy.logwarn(f'Could not plan pose goal: {self._moveit_desc(plan_result)}')
             return plan_success, plan
+
+   
+   def _publish_waypoints(self, waypoints):
+      for i, waypoint in enumerate(waypoints):
+         tfmsg = TransformStampedMsg()
+         tfmsg.header.stamp = rospy.Time.now()
+         tfmsg.header.frame_id = 'world'
+         tfmsg.child_frame_id = f'waypoint-{i+1}'
+         tfmsg.transform.translation.x = waypoint.position.x
+         tfmsg.transform.translation.y = waypoint.position.y
+         tfmsg.transform.translation.z = waypoint.position.z
+         tfmsg.transform.rotation = waypoint.orientation
+         self._tf2_pub.sendTransform(tfmsg)
 
 
    def _reconfigure_callback(self, config, level):
