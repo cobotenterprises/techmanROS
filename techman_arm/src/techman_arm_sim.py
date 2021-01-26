@@ -11,6 +11,8 @@ from geometry_msgs.msg import TransformStamped as TransformStampedMsg
 class TechmanArmSim(TechmanArm):
    ''' ROS node to interact with physical Techman robotic arm. '''
 
+   LINEAR_STEP=15
+
 
    def __init__(self):    
       super().__init__('techman_arm', 'Techman simulated arm node', 'moveit')
@@ -28,8 +30,10 @@ class TechmanArmSim(TechmanArm):
 
       if isinstance(plan, list):
          # Execute joints path
-         for i, joint_state in enumerate(plan):
-            self._moveit_group.go(joint_state, wait=True)
+         self._moveit_group.go(plan[0], wait=True)
+         for i in range(1, len(plan)-1, self.LINEAR_STEP):
+            self._moveit_group.go(plan[i], wait=True)
+         self._moveit_group.go(plan[-1], wait=True)
          return True
       else:
          # Execute MoveIt plan

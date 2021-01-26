@@ -164,7 +164,7 @@ class TechmanArm:
       ik_request.robot_state = robot_state
       ik_request.avoid_collisions = True
       ik_request.pose_stamped.header.frame_id = 'world'
-      ik_request.timeout = rospy.Duration(secs=0.05)
+      ik_request.timeout = rospy.Duration(secs=0.1)
 
       for ikc_i in range(0, len(ik_cands), 6):
          start_joint_state = np.radians(ik_cands[ikc_i:ikc_i+6])
@@ -179,6 +179,7 @@ class TechmanArm:
          for waypoints in self._linear_buffer_waypoints:
             for waypoint in waypoints:
                ik_request.pose_stamped.pose = waypoint
+               ik_request.robot_state.joint_state.position[0:6] = motion_path[-1]
                ik_res = self._compute_ik(ik_request)
                if ik_res.error_code.val != 1:
                   print('Couldn\'t finish linear chain, skipping')
