@@ -51,13 +51,22 @@ class TechmanArmReal(TechmanArm):
                # Buffer exection when plan is part of linear preparation
                if plan is None: return True
 
-               # Execute trajectory
-               for joint_state in plan.joint_trajectory.points:
-                  trsct.move_to_joint_angles_ptp(
-                     np.degrees(np.asarray(joint_state.positions)).tolist(),
-                     goal.speed,
-                     0, blending_perc=1.0, use_precise_positioning=False
-                  )
+               if isinstance(plan, list):
+                  # Execute joints path
+                  for joint_state in plan:
+                     trsct.move_to_joint_angles_ptp(
+                        np.degrees(joint_state).tolist(),
+                        goal.speed,
+                        0, blending_perc=1.0, use_precise_positioning=False
+                     )
+               else:
+                  # Execute MoveIt plan
+                  for joint_state in plan.joint_trajectory.points:
+                     trsct.move_to_joint_angles_ptp(
+                        np.degrees(joint_state.positions).tolist(),
+                        goal.speed,
+                        0, blending_perc=1.0, use_precise_positioning=False
+                     )
 
             if self._planner == 'tmflow':
                if isinstance(goal, MoveJointsGoal):
@@ -76,7 +85,6 @@ class TechmanArmReal(TechmanArm):
                         use_precise_positioning=self._precise_positioning
                      )
                if isinstance(goal, MoveTCPGoal):
-                  # TODO
                   if goal.relative:
                      trsct.move_to_relative_point_ptp(
                         goal.goal,
