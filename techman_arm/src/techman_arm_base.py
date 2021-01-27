@@ -84,19 +84,23 @@ class TechmanArm:
 
 
    def _move_joints(self, goal):
+      rospy.set_param('/techman_arm/in_motion', True)
       self._mja_in_feedback = True
       did_succeed = self._execute_goal(goal)
       self._mja_in_feedback = False
       if did_succeed: self._move_joints_act.set_succeeded(MoveJointsFeedback(self._joint_state))
       else: self._move_joints_act.set_aborted(MoveJointsFeedback(self._joint_state))
+      rospy.set_param('/techman_arm/in_motion', False)
 
 
    def _move_tcp(self, goal):
+      rospy.set_param('/techman_arm/in_motion', True)
       self._mta_in_feedback = True
       did_succeed = self._execute_goal(goal)
       self._mta_in_feedback = False
       if did_succeed: self._move_tcp_act.set_succeeded(MoveTCPFeedback(self._joint_state))
       else: self._move_tcp_act.set_aborted(MoveTCPFeedback(self._joint_state))
+      rospy.set_param('/techman_arm/in_motion', False)
 
 
    def _execute_goal(self, goal):

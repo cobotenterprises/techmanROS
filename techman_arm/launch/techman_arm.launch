@@ -3,6 +3,8 @@
    <arg name="simulated" default="false" />
    <arg name="rviz" default="false" />
 
+   <rosparam param="/techman_arm/in_motion">false</rosparam>
+
    <!-- Load robot model -->
    <include file="$(find techman_model)/launch/load.launch" />
 
