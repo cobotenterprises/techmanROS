@@ -24,6 +24,8 @@ class TechmanArm:
 
    JOINTS = ['shoulder_1_joint', 'shoulder_2_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
    LINKS = ['arm_1_link', 'arm_2_link', 'shoulder_1_link', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link']
+
+   PLAN_TIMEOUT = 0.5
    MIN_MOVEIT_CONFORMITY = 0.95
    MAX_LINEAR_JOINT_FLUCTUATION = 20
 
@@ -37,6 +39,7 @@ class TechmanArm:
       # Linear buffer variables
       self._in_linear_buffer = False
       self._linear_buffer_size = -1
+      self._linear_buffer_execution_size = -1
       self._linear_buffer_start_pose = None
       self._linear_buffer_waypoints = []
 
@@ -163,7 +166,7 @@ class TechmanArm:
          ik_request.robot_state = robot_state
          ik_request.avoid_collisions = True
          ik_request.pose_stamped.header.frame_id = 'world'
-         ik_request.timeout = rospy.Duration(secs=3)
+         ik_request.timeout = rospy.Duration(secs=self.PLAN_TIMEOUT)
 
       motion_path, finished_chain = [start_joint_state], True
       ik_request.constraints.joint_constraints = build_joint_constraints(start_joint_state)
@@ -206,7 +209,7 @@ class TechmanArm:
       ik_request.robot_state = robot_state
       ik_request.avoid_collisions = True
       ik_request.pose_stamped.header.frame_id = 'world'
-      ik_request.timeout = rospy.Duration(secs=0.1)
+      ik_request.timeout = rospy.Duration(secs=self.PLAN_TIMEOUT)
 
       for ikc_i in range(0, len(ik_cands), 6):
          start_joint_state = np.radians(ik_cands[ikc_i:ikc_i+6]).tolist()
@@ -220,10 +223,14 @@ class TechmanArm:
             start_joint_state,
             [item for sublist in self._linear_buffer_waypoints for item in sublist],
             ik_request=ik_request
-         )
+         )         
 
          if did_succeed:
             print('Found valid begin joint state!')
+            # Clip motion path
+            eu_index = len([item for sublist in self._linear_buffer_waypoints[:self._linear_buffer_execution_size] for item in sublist])
+            motion_path = motion_path[:eu_index]
+            # Insert initial TCP motion
             motion_path.insert(0, start_joint_state)
             return motion_path
       
@@ -339,6 +346,7 @@ class TechmanArm:
          if goal.prepare_linear > 0:
             self._in_linear_buffer = True
             self._linear_buffer_size = goal.prepare_linear
+            self._linear_buffer_execution_size = goal.execute_linear
 
          if self._in_linear_buffer:
             if self._linear_buffer_start_pose is None:
