@@ -24,6 +24,8 @@ from techman_arm.srv import ExitListen, ExitListenResponse
 class TechmanArmReal(TechmanArm):
    ''' ROS node to interact with physical Techman robotic arm. '''
 
+   SKIP_WAYPOINTS = 5
+
 
    def __init__(self, robot_ip, planner):    
       super().__init__('techman_arm', 'Techman physical arm node', planner)
@@ -53,12 +55,23 @@ class TechmanArmReal(TechmanArm):
 
                if isinstance(plan, list):
                   # Execute joints path
-                  for joint_state in plan:
+                  trsct.move_to_joint_angles_ptp(
+                     np.degrees(plan[0]).tolist(),
+                     goal.speed,
+                     0, blending_perc=1.0, use_precise_positioning=False
+                  )
+                  for i in range(1, len(plan)-1, self.SKIP_WAYPOINTS):
                      trsct.move_to_joint_angles_ptp(
-                        np.degrees(joint_state).tolist(),
+                        np.degrees(plan[i]).tolist(),
                         goal.speed,
                         0, blending_perc=1.0, use_precise_positioning=False
                      )
+                  trsct.move_to_joint_angles_ptp(
+                     np.degrees(plan[-1]).tolist(),
+                     goal.speed,
+                     0, blending_perc=1.0, use_precise_positioning=False
+                  )
+
                else:
                   # Execute MoveIt plan
                   for joint_state in plan.joint_trajectory.points:
